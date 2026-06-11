@@ -38,6 +38,22 @@ Sobreviva por **30 minutos** coletando cristais de XP, montando builds com até 
 - Música procedural por WebAudio (temas de menu, mapa e boss), efeitos sintetizados,
   números de dano coloridos por tipo, glow aditivo, salvamento local automático
 
+## Direção de arte
+
+Inspirada nas capas clássicas de alta fantasia (tons de joia + iluminura):
+
+- Tema **safira e ouro velho** em toda a interface, tipografia serifada com versaletes
+- **Olho de dragão** gigante no menu — íris em gradiente de safira, pupila vertical
+  que dilata, escamas concêntricas, piscada periódica — sob um eclipse de corona dourada,
+  cordilheira em silhueta e brasas subindo
+- **Moldura ornamental** de manuscrito nos quatro cantos da tela (SVG embutido)
+- **Runas da Língua Antiga** gravadas no chão dos mapas, pulsando suavemente
+- Entrada de boss cerimonial: letterbox cinematográfico com nome em ouro e lore
+- Cristais de XP como **gemas lapidadas** com faceta e brilho; inimigos com contorno
+  de tinta de gravura; bosses com chifres e olhos de réptil incandescentes
+- Partículas atmosféricas por mapa (vagalumes, cinzas, poeira dourada, poeira estelar)
+  e luz de tocha acompanhando o herói
+
 ## Arquitetura
 
 Arquivo único (`index.html`) organizado em módulos: `Save`, `Aud` (áudio), `Input`,

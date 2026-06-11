@@ -6,9 +6,11 @@
 <title>Eclipse Survivors</title>
 <style>
 :root{
-  --bg:#0d0a14; --panel:#1a1426; --panel2:#241b36; --line:#3a2d56;
-  --txt:#e8e2f4; --dim:#9a8fc0; --gold:#ffce54; --hp:#ff5566; --xp:#7be3ff;
+  /* paleta inspirada nas capas da saga do Ciclo da Herança: safira profunda + ouro velho */
+  --bg:#080c18; --panel:#111a2e; --panel2:#16223c; --line:#2b3a5e;
+  --txt:#eae3cf; --dim:#94a0c2; --gold:#d9b44a; --gold2:#8a6d2f; --hp:#e0344f; --xp:#5fb7ff;
   --comum:#9aa0b5; --incomum:#5dd97a; --rara:#5aa0ff; --epica:#c06aff; --lendaria:#ffae3d;
+  --serif:'Palatino Linotype','Book Antiqua',Palatino,Georgia,'Times New Roman',serif;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
@@ -21,26 +23,39 @@ canvas{display:block;position:fixed;inset:0}
 .overlay{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;
   justify-content:center;z-index:20;background:rgba(8,5,16,.82);backdrop-filter:blur(3px);padding:16px;overflow-y:auto}
 .overlay.on{display:flex}
-h1.logo{font-size:clamp(34px,7vw,64px);letter-spacing:3px;margin:30px 0 4px;
-  background:linear-gradient(180deg,#ffe9b0,#ff9d4d 55%,#b34dff);
+h1.logo{font-family:var(--serif);font-size:clamp(36px,7vw,68px);letter-spacing:6px;margin:30px 0 0;
+  background:linear-gradient(180deg,#f8ecc2 0%,#e9cd7a 38%,#d9b44a 55%,#8a5f1d 78%,#caa64a 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
-  text-shadow:0 0 40px rgba(180,80,255,.25);font-weight:800;text-align:center}
-.tag{color:var(--dim);margin-bottom:26px;font-size:14px;text-align:center}
-h2{margin:8px 0 14px;font-size:22px;letter-spacing:1px}
-.btn{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
-  color:var(--txt);padding:13px 26px;border-radius:10px;font-size:17px;cursor:pointer;
-  margin:5px;min-width:210px;transition:transform .08s, box-shadow .08s;font-weight:600}
-.btn:hover{transform:translateY(-2px);box-shadow:0 4px 18px rgba(120,60,220,.35);border-color:#6a4fd0}
+  filter:drop-shadow(0 2px 1px rgba(0,0,0,.8)) drop-shadow(0 0 26px rgba(217,180,74,.3));
+  font-weight:700;text-align:center;font-variant:small-caps}
+.runeLine{font-family:var(--serif);color:#caa64a;opacity:.55;letter-spacing:8px;font-size:15px;
+  margin:2px 0 6px;text-align:center;text-shadow:0 0 12px rgba(217,180,74,.5)}
+.tag{font-family:var(--serif);color:var(--dim);margin-bottom:24px;font-size:14.5px;
+  text-align:center;letter-spacing:1.5px;font-style:italic}
+h2{font-family:var(--serif);margin:8px 0 14px;font-size:23px;letter-spacing:2px;
+  color:#e9cd7a;font-variant:small-caps;text-shadow:0 2px 4px #000}
+h2::before{content:"❧ ";color:var(--gold2);font-size:.8em}
+h2::after{content:" ☙";color:var(--gold2);font-size:.8em}
+.btn{font-family:var(--serif);background:linear-gradient(180deg,#1b2742,#0e1626 60%,#101b30);
+  border:1px solid var(--gold2);box-shadow:inset 0 1px 0 rgba(233,205,122,.15), 0 2px 6px #000a;
+  color:#e9dfc2;padding:13px 26px;border-radius:6px;font-size:17.5px;cursor:pointer;
+  margin:5px;min-width:210px;transition:transform .08s, box-shadow .12s, border-color .12s;
+  font-weight:600;letter-spacing:1px}
+.btn:hover{transform:translateY(-2px);border-color:var(--gold);
+  box-shadow:inset 0 1px 0 rgba(233,205,122,.25), 0 4px 18px rgba(217,180,74,.3)}
 .btn:active{transform:translateY(0)}
-.btn.primary{background:linear-gradient(180deg,#7b3ff2,#5526b8);border-color:#9a6cff}
+.btn.primary{background:linear-gradient(180deg,#2c4d8f,#15264c 65%,#1a2f5c);border-color:var(--gold);
+  box-shadow:inset 0 1px 0 rgba(180,210,255,.25), 0 2px 14px rgba(80,130,255,.25)}
 .btn.small{min-width:0;padding:8px 14px;font-size:14px;margin:3px}
 .btn:disabled{opacity:.4;cursor:default;transform:none;box-shadow:none}
 .row{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:980px}
 .grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:1000px;margin-bottom:14px}
-.cardSel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
-  width:215px;cursor:pointer;transition:.1s;position:relative}
-.cardSel:hover{border-color:#8a6cff;transform:translateY(-3px)}
-.cardSel.sel{border-color:var(--gold);box-shadow:0 0 16px rgba(255,206,84,.3)}
+.cardSel{background:linear-gradient(180deg,#15203a,#0d1526);border:1px solid var(--line);
+  border-radius:8px;padding:14px;width:215px;cursor:pointer;transition:.1s;position:relative;
+  box-shadow:inset 0 0 0 1px rgba(217,180,74,.12), inset 0 0 28px rgba(0,0,0,.5)}
+.cardSel:hover{border-color:var(--gold);transform:translateY(-3px)}
+.cardSel.sel{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(217,180,74,.35),0 0 18px rgba(217,180,74,.35)}
+.cardSel .nm{font-family:var(--serif)}
 .cardSel.lock{opacity:.45;cursor:default}
 .cardSel .ic{font-size:34px}
 .cardSel .nm{font-weight:700;margin:6px 0 3px}
@@ -48,11 +63,14 @@ h2{margin:8px 0 14px;font-size:22px;letter-spacing:1px}
 .cardSel .lk{font-size:11.5px;color:var(--gold);margin-top:6px}
 .coins{position:absolute;top:14px;right:18px;color:var(--gold);font-weight:700;font-size:18px;z-index:11}
 .back{position:absolute;top:12px;left:14px}
-.upCard{background:linear-gradient(180deg,var(--panel2),var(--panel));border:2px solid var(--line);
-  border-radius:14px;padding:18px 14px;width:200px;cursor:pointer;text-align:center;transition:.1s;position:relative}
-.upCard:hover{transform:translateY(-5px) scale(1.03)}
-.upCard .ic{font-size:40px}
-.upCard .nm{font-weight:700;margin:8px 0 4px;font-size:16px}
+.upCard{background:linear-gradient(180deg,#1a2742,#0e1626 70%,#121d33);border:2px solid var(--line);
+  border-radius:10px;padding:18px 14px;width:200px;cursor:pointer;text-align:center;transition:.1s;position:relative;
+  box-shadow:inset 0 0 0 1px rgba(217,180,74,.14), inset 0 -18px 30px rgba(0,0,0,.45), 0 4px 14px #000a}
+.upCard::before{content:"";position:absolute;inset:5px;border:1px solid rgba(217,180,74,.18);
+  border-radius:6px;pointer-events:none}
+.upCard:hover{transform:translateY(-5px) scale(1.03);box-shadow:inset 0 0 0 1px rgba(217,180,74,.3),0 8px 24px #000c}
+.upCard .ic{font-size:40px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.7))}
+.upCard .nm{font-family:var(--serif);font-weight:700;margin:8px 0 4px;font-size:16.5px;letter-spacing:.5px}
 .upCard .lv{font-size:12px;color:var(--xp);margin-bottom:6px}
 .upCard .ds{font-size:12.5px;color:var(--dim);line-height:1.4}
 .upCard .rar{position:absolute;top:8px;right:10px;font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
@@ -61,27 +79,41 @@ h2{margin:8px 0 14px;font-size:22px;letter-spacing:1px}
 @keyframes gpulse{from{box-shadow:0 0 14px rgba(255,174,61,.4)}to{box-shadow:0 0 30px rgba(255,174,61,.75)}}
 .hud{position:fixed;inset:0;pointer-events:none;z-index:5;display:none}
 .hud.on{display:block}
-#hpBar,#xpBar{position:fixed;left:50%;transform:translateX(-50%);height:14px;border-radius:8px;
-  background:#000a;border:1px solid #fff3;overflow:hidden}
+#hpBar,#xpBar{position:fixed;left:50%;transform:translateX(-50%);height:14px;border-radius:7px;
+  background:#02050cdd;border:1px solid var(--gold2);box-shadow:0 2px 8px #000a, inset 0 2px 4px #000;overflow:hidden}
 #hpBar{bottom:54px;width:min(420px,62vw)}
-#xpBar{top:0;width:100vw;height:10px;border-radius:0;border:none}
-#hpFill{height:100%;width:100%;background:linear-gradient(90deg,#ff7a6b,var(--hp));transition:width .15s}
-#xpFill{height:100%;width:0%;background:linear-gradient(90deg,#54c8ff,var(--xp));transition:width .15s}
+#xpBar{top:0;width:100vw;height:10px;border-radius:0;border:none;border-bottom:1px solid rgba(217,180,74,.35)}
+#hpFill{height:100%;width:100%;background:linear-gradient(180deg,#ff8a78,#e0344f 45%,#8f1428);transition:width .15s}
+#xpFill{height:100%;width:0%;background:linear-gradient(180deg,#a8d8ff,#4f8fe0 50%,#1d4f9e);transition:width .15s}
 #hudTop{position:fixed;top:16px;left:0;width:100%;display:flex;justify-content:center;gap:24px;
-  font-weight:700;font-size:18px;text-shadow:0 2px 4px #000}
+  font-family:var(--serif);font-weight:700;font-size:19px;letter-spacing:1px;
+  text-shadow:0 2px 4px #000,0 0 16px rgba(0,0,0,.8)}
 #hudLeft{position:fixed;top:42px;left:12px;font-size:14px;text-shadow:0 2px 4px #000;line-height:1.7}
 #slots{position:fixed;top:42px;right:12px;text-align:right;font-size:18px;text-shadow:0 2px 4px #000;line-height:1.5;letter-spacing:2px}
 #bossBar{position:fixed;top:58px;left:50%;transform:translateX(-50%);width:min(520px,80vw);display:none}
-#bossBar .nm{text-align:center;font-size:14px;font-weight:700;color:#ffb3c0;text-shadow:0 2px 4px #000;margin-bottom:3px}
-#bossBar .bar{height:12px;background:#000a;border:1px solid #fff3;border-radius:6px;overflow:hidden}
-#bossBar .fill{height:100%;background:linear-gradient(90deg,#ff3355,#ff7799);width:100%}
+#bossBar .nm{font-family:var(--serif);text-align:center;font-size:15px;font-weight:700;color:#f0c8a0;
+  letter-spacing:3px;font-variant:small-caps;text-shadow:0 2px 4px #000,0 0 14px rgba(224,52,79,.6);margin-bottom:3px}
+#bossBar .bar{height:12px;background:#02050cdd;border:1px solid var(--gold2);border-radius:6px;overflow:hidden;
+  box-shadow:0 2px 8px #000a}
+#bossBar .fill{height:100%;background:linear-gradient(180deg,#ff7a8a,#e0344f 50%,#7a0e20);width:100%}
+/* moldura ornamental de manuscrito nos cantos da tela */
+#frame{position:fixed;inset:5px;pointer-events:none;z-index:90;
+  box-shadow:inset 0 0 0 1px rgba(201,162,63,.16), inset 0 0 60px rgba(0,0,0,.35);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><g fill='none' stroke='%23c9a23f' stroke-width='2' opacity='.8'><path d='M3 62 V20 Q3 3 20 3 H62'/><path d='M9 62 V24 Q9 9 24 9 H62' opacity='.45'/><path d='M20 3 Q34 3 34 13 Q34 21 26 21 Q20 21 20 15 Q20 11 25 11'/></g><circle cx='3' cy='62' r='2.5' fill='%23c9a23f'/><circle cx='62' cy='3' r='2.5' fill='%23c9a23f'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><g transform='rotate(90 32 32)'><g fill='none' stroke='%23c9a23f' stroke-width='2' opacity='.8'><path d='M3 62 V20 Q3 3 20 3 H62'/><path d='M9 62 V24 Q9 9 24 9 H62' opacity='.45'/><path d='M20 3 Q34 3 34 13 Q34 21 26 21 Q20 21 20 15 Q20 11 25 11'/></g><circle cx='3' cy='62' r='2.5' fill='%23c9a23f'/><circle cx='62' cy='3' r='2.5' fill='%23c9a23f'/></g></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><g transform='rotate(180 32 32)'><g fill='none' stroke='%23c9a23f' stroke-width='2' opacity='.8'><path d='M3 62 V20 Q3 3 20 3 H62'/><path d='M9 62 V24 Q9 9 24 9 H62' opacity='.45'/><path d='M20 3 Q34 3 34 13 Q34 21 26 21 Q20 21 20 15 Q20 11 25 11'/></g><circle cx='3' cy='62' r='2.5' fill='%23c9a23f'/><circle cx='62' cy='3' r='2.5' fill='%23c9a23f'/></g></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><g transform='rotate(270 32 32)'><g fill='none' stroke='%23c9a23f' stroke-width='2' opacity='.8'><path d='M3 62 V20 Q3 3 20 3 H62'/><path d='M9 62 V24 Q9 9 24 9 H62' opacity='.45'/><path d='M20 3 Q34 3 34 13 Q34 21 26 21 Q20 21 20 15 Q20 11 25 11'/></g><circle cx='3' cy='62' r='2.5' fill='%23c9a23f'/><circle cx='62' cy='3' r='2.5' fill='%23c9a23f'/></g></svg>");
+  background-repeat:no-repeat;background-size:64px 64px;
+  background-position:top left,top right,bottom right,bottom left}
 #pauseBtn{position:fixed;top:14px;right:14px;pointer-events:auto;background:#0008;border:1px solid #fff4;
   color:#fff;border-radius:8px;padding:6px 12px;font-size:18px;cursor:pointer;z-index:6}
 #tut{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#000a;border:1px solid var(--line);
   border-radius:10px;padding:8px 16px;font-size:14px;color:var(--dim);text-align:center;max-width:90vw}
-#toast{position:fixed;top:84px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#3a2a10,#241a08);
-  border:1px solid var(--gold);color:var(--gold);border-radius:10px;padding:10px 20px;font-weight:700;
-  display:none;z-index:50;text-align:center;box-shadow:0 4px 20px #000a}
+#toast{position:fixed;top:84px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#2c2310,#191205);
+  border:1px solid var(--gold);color:#e9cd7a;border-radius:8px;padding:10px 22px;font-weight:700;
+  font-family:var(--serif);letter-spacing:.5px;
+  display:none;z-index:50;text-align:center;box-shadow:0 4px 20px #000c, inset 0 0 18px rgba(217,180,74,.08)}
 .statTbl{display:grid;grid-template-columns:auto auto;gap:4px 22px;font-size:15px;margin:10px 0;text-align:left}
 .statTbl b{color:var(--gold)}
 .shopItem{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
@@ -124,6 +156,7 @@ small.hint{color:var(--dim)}
 </head>
 <body>
 <canvas id="cv"></canvas>
+<div id="frame"></div>
 
 <!-- ============ HUD ============ -->
 <div class="hud" id="hud">
@@ -141,7 +174,8 @@ small.hint{color:var(--dim)}
 
 <!-- ============ MENU ============ -->
 <div class="screen on" id="scrMenu">
-  <h1 class="logo">ECLIPSE SURVIVORS</h1>
+  <h1 class="logo">Eclipse Survivors</h1>
+  <div class="runeLine">᛫ ᚠᛁᚱᛖ ᛫ ᛋᛏᚨᚱ ᛫ ᛖᚲᛚᛁᛈᛋᛖ ᛫</div>
   <div class="tag">Sobreviva às hordas. Monte sua build. Quebre o jogo.</div>
   <div class="coins" id="menuCoins"></div>
   <button class="btn primary" onclick="UI.charSelect()">▶ &nbsp;Jogar</button>
@@ -298,9 +332,11 @@ const GLOW={
 };
 function glow(x,y,r,spr,alpha=1){ctx.save();ctx.globalCompositeOperation="lighter";
   ctx.globalAlpha=alpha;ctx.drawImage(spr,x-r,y-r,r*2,r*2);ctx.restore()}
-/* estrelas do fundo do menu */
+/* estrelas e brasas do fundo do menu */
 const MENU_STARS=Array.from({length:140},()=>({x:Math.random(),y:Math.random(),
   s:Math.random()*1.8+.4,ph:Math.random()*TAU,sp:Math.random()*.6+.2}));
+const MENU_EMBERS=Array.from({length:36},()=>({x:Math.random(),ph:Math.random(),
+  sp:Math.random()*.05+.025,s:Math.random()*2.4+1.2,big:Math.random()<.25}));
 
 /* ================= SAVE ================= */
 const SAVE_KEY="eclipseSurvivors_v1";
@@ -700,24 +736,87 @@ const Game={
       ||this.state==="end"||this.state==="merch")this.draw();
     else{this.menuT+=dt;this.drawMenuBg()}
   },
-  /* fundo animado das telas de menu: céu estrelado + eclipse com corona */
+  /* fundo das telas de menu, à la capa de livro de fantasia:
+     céu safira, eclipse de corona dourada, OLHO DE DRAGÃO que observa e pisca,
+     cordilheira em silhueta e brasas subindo */
   drawMenuBg(){
     const t=this.menuT;
-    ctx.fillStyle="#0d0a14";ctx.fillRect(0,0,W,H);
+    const sky=ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,"#04060e");sky.addColorStop(.55,"#0a1226");sky.addColorStop(1,"#0e1830");
+    ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
     for(const s of MENU_STARS){
       const tw=.35+.65*Math.abs(Math.sin(t*s.sp+s.ph));
       ctx.globalAlpha=tw*.8;ctx.fillStyle="#cfd8ff";
       ctx.fillRect(s.x*W,s.y*H,s.s,s.s)}
     ctx.globalAlpha=1;
-    const ex=W*.78,ey=H*.26,r=Math.min(W,H)*.13;
-    glow(ex,ey,r*3.4,GLOW.purple,.5);
+    // eclipse com corona dourada
+    const ex=W*.79,ey=H*.22,r=Math.min(W,H)*.12;
+    glow(ex,ey,r*3.4,GLOW.purple,.45);
     glow(ex,ey,r*2.2,GLOW.orange,.35+.1*Math.sin(t*.8));
     ctx.save();ctx.globalCompositeOperation="lighter";
-    const cor=ctx.createRadialGradient(ex,ey,r*.92,ex,ey,r*1.5);
-    cor.addColorStop(0,"rgba(255,190,90,.9)");cor.addColorStop(.35,"rgba(255,130,60,.32)");
-    cor.addColorStop(1,"rgba(160,60,255,0)");
-    ctx.fillStyle=cor;ctx.beginPath();ctx.arc(ex,ey,r*1.6,0,TAU);ctx.fill();ctx.restore();
-    ctx.fillStyle="#070410";ctx.beginPath();ctx.arc(ex,ey,r,0,TAU);ctx.fill();
+    const cor=ctx.createRadialGradient(ex,ey,r*.92,ex,ey,r*1.6);
+    cor.addColorStop(0,"rgba(248,220,140,.95)");cor.addColorStop(.35,"rgba(217,160,70,.32)");
+    cor.addColorStop(1,"rgba(120,80,255,0)");
+    ctx.fillStyle=cor;ctx.beginPath();ctx.arc(ex,ey,r*1.7,0,TAU);ctx.fill();ctx.restore();
+    ctx.fillStyle="#05030e";ctx.beginPath();ctx.arc(ex,ey,r,0,TAU);ctx.fill();
+    // ===== olho de dragão =====
+    const oxE=W*.30, oyE=H*.50, R=Math.min(W,H)*.34, tilt=-.12;
+    ctx.save();ctx.globalAlpha=.62;
+    // fileiras de escamas ao redor do olho
+    ctx.strokeStyle="rgba(70,105,180,.22)";ctx.lineWidth=2;
+    for(let row=0;row<4;row++){const rr=R*(1.22+row*.17);
+      for(let k=0;k<12;k++){const a=k/12*TAU+(row%2?.26:0);
+        const sx2=oxE+Math.cos(a)*rr,sy2=oyE+Math.sin(a)*rr*.72;
+        ctx.beginPath();ctx.arc(sx2,sy2,R*.15,a+Math.PI*.65,a+Math.PI*1.35);ctx.stroke()}}
+    // globo ocular: íris safira em gradiente radial
+    ctx.save();
+    ctx.beginPath();ctx.ellipse(oxE,oyE,R,R*.6,tilt,0,TAU);ctx.clip();
+    const iris=ctx.createRadialGradient(oxE,oyE,R*.04,oxE,oyE,R);
+    iris.addColorStop(0,"#8fc0ff");iris.addColorStop(.22,"#2c5fb0");
+    iris.addColorStop(.6,"#143a78");iris.addColorStop(1,"#060f24");
+    ctx.fillStyle=iris;ctx.fillRect(oxE-R,oyE-R,R*2,R*2);
+    // estrias da íris
+    ctx.strokeStyle="rgba(150,195,255,.16)";ctx.lineWidth=1.5;
+    for(let k=0;k<30;k++){const a=k/30*TAU+Math.sin(t*.2+k)*.03;
+      ctx.beginPath();ctx.moveTo(oxE+Math.cos(a)*R*.14,oyE+Math.sin(a)*R*.1);
+      ctx.lineTo(oxE+Math.cos(a)*R*.92,oyE+Math.sin(a)*R*.58);ctx.stroke()}
+    // pupila vertical de réptil, com leve dilatação viva
+    const pw=R*(.085+.015*Math.sin(t*.7));
+    ctx.fillStyle="#01030a";
+    ctx.beginPath();ctx.ellipse(oxE+Math.sin(t*.25)*R*.04,oyE,pw,R*.52,tilt,0,TAU);ctx.fill();
+    // reflexo úmido
+    ctx.fillStyle="rgba(255,255,255,.28)";
+    ctx.beginPath();ctx.ellipse(oxE-R*.3,oyE-R*.2,R*.13,R*.06,-.5,0,TAU);ctx.fill();
+    ctx.fillStyle="rgba(255,255,255,.12)";
+    ctx.beginPath();ctx.ellipse(oxE+R*.22,oyE+R*.26,R*.07,R*.035,-.4,0,TAU);ctx.fill();
+    // pálpebras: semicerradas + piscada a cada ~7s
+    const bp=t%7, blink=bp>6.62?Math.sin((bp-6.62)/.38*Math.PI):0;
+    const lidTop=R*.6*(.20+.8*blink), lidBot=R*.6*(.12+.8*blink);
+    ctx.fillStyle="#060a16";
+    ctx.fillRect(oxE-R*1.2,oyE-R*.8,R*2.4,lidTop+R*.2);
+    ctx.fillRect(oxE-R*1.2,oyE+R*.6-lidBot,R*2.4,lidBot+R*.2);
+    ctx.restore();
+    // contorno dourado do olho (traço de iluminura)
+    ctx.strokeStyle="rgba(201,162,63,.5)";ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.ellipse(oxE,oyE,R,R*.6,tilt,0,TAU);ctx.stroke();
+    glow(oxE,oyE,R*1.15,GLOW.cyan,.10);
+    ctx.restore();
+    // cordilheira em silhueta (duas camadas)
+    for(const[al,yb,amp,colM]of[[1,.86,.10,"#0a1020"],[1,.93,.06,"#04060c"]]){
+      ctx.fillStyle=colM;ctx.beginPath();ctx.moveTo(0,H);
+      for(let x=0;x<=W;x+=36){
+        const yv=H*yb - Math.abs(Math.sin(x*.013)+Math.sin(x*.027+2.4))*H*amp;
+        ctx.lineTo(x,yv)}
+      ctx.lineTo(W,H);ctx.closePath();ctx.fill()}
+    // brasas subindo
+    for(const e of MENU_EMBERS){
+      const prog=((t*e.sp+e.ph)%1.15);
+      const yv=H-prog*H*1.1, xv=e.x*W+Math.sin(t*1.2+e.ph*9)*26;
+      ctx.globalAlpha=Math.max(0,Math.min(.85,(1.05-prog)))*.8;
+      ctx.fillStyle=e.big?"#f0c060":"#d9893a";
+      ctx.fillRect(xv,yv,e.s,e.s);
+      if(e.big)glow(xv,yv,7,GLOW.gold,.4*ctx.globalAlpha)}
+    ctx.globalAlpha=1;
   },
 
   update(dt){
@@ -728,6 +827,8 @@ const Game={
     let buffEnd=false;
     for(const k in this.buffT)if(this.buffT[k]>0){this.buffT[k]-=dt;if(this.buffT[k]<=0)buffEnd=true}
     if(buffEnd)this.recalc();
+    // faixa de entrada do boss
+    if(this.banner){this.banner.t-=dt;if(this.banner.t<=0)this.banner=null}
     // tutorial
     if(this.tutT>0){this.tutT-=dt;const tu=$("tut");
       const msgs=["Mova-se para sobreviver — os ataques são automáticos.","Colete cristais ✦ para subir de nível.","Combine armas e passivas para evoluir!"];
@@ -750,6 +851,13 @@ const Game={
     if(s.regen>0){p.regenAcc+=s.regen*dt;if(p.regenAcc>=1){const h=Math.floor(p.regenAcc);p.regenAcc-=h;this.heal(h,true)}}
     if(p.hurtT>0)p.hurtT-=dt;
     if(this.frozen>0)this.frozen-=dt;
+    // atmosfera do mapa: vagalumes, cinzas, poeira de estrelas...
+    if(this.parts.length<150&&Math.random()<dt*9){
+      const ambCol={floresta:"#b8e87a",cripta:"#9a7be8",deserto:"#e8d49a",
+        ruinas:"#ff9a5a",biblioteca:"#ffd98a",abismo:"#9ab8ff"}[this.selMap]||"#cfd8ff";
+      this.parts.push({x:p.x+rnd(-W*.55,W*.55),y:p.y+rnd(-H*.55,H*.55),
+        vx:rnd(-9,9),vy:this.selMap==="ruinas"?rnd(-26,-10):rnd(-12,5),
+        t:rnd(2.2,4),col:ambCol+"55",r:rnd(1.4,2.6)});}
     // armas
     for(const w of this.weapons)this.fireWeapon(w,dt);
     this.updateSummons(dt);
@@ -1113,7 +1221,7 @@ const Game={
       const s2={...e,hp:e.maxhp*.6,maxhp:e.maxhp*.6,r:e.r*.85,col:"#5a4a7a",echo:1};
       this.spawnAt(s2)}
     $("bossBar").style.display="block";$("bossNm").textContent="☠ "+B.nm;
-    this.toast("☠ "+B.nm.toUpperCase()+" CHEGOU!");
+    this.banner={nm:B.nm,lore:B.lore,t:4.4,max:4.4}; // entrada cerimonial
     Aud.sfx("boss");Aud.startMusic("boss");this.shakeIt(10);
   },
   bossDied(e){
@@ -1516,7 +1624,13 @@ const Game={
           ctx.fillRect(cx2-12,cy2-6,24,2);ctx.fillRect(cx2-12,cy2+4,24,2)}
         else if(map.deco==="star"){const tw=.5+.5*Math.sin(this.time*2+h);
           ctx.globalAlpha=.25+.35*tw;ctx.fillStyle="#cfe0ff";
-          ctx.fillRect(cx2-1.5,cy2-1.5,3,3);ctx.globalAlpha=1}}}
+          ctx.fillRect(cx2-1.5,cy2-1.5,3,3);ctx.globalAlpha=1}}
+      // runas da língua antiga gravadas no chão, pulsando de leve
+      if((h%41)===0){const cx2=gx*GS+ox+GS/2,cy2=gy*GS+oy+GS/2;
+        const RUNES="ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛋ";
+        ctx.globalAlpha=.10+.07*Math.sin(this.time*1.4+h);
+        ctx.fillStyle="#e9cd7a";ctx.font="17px serif";ctx.textAlign="center";
+        ctx.fillText(RUNES[h%RUNES.length],cx2,cy2+6);ctx.globalAlpha=1}}
     // zonas
     for(const z of this.zones){const zx=z.x+ox,zy=z.y+oy;
       ctx.globalAlpha=z.warn?(.25+.25*Math.sin(this.time*16)):.3;
@@ -1547,13 +1661,20 @@ const Game={
       ctx.font="bold 13px 'Segoe UI'";ctx.fillStyle="#ffd24d";
       ctx.fillText("💰 "+Math.ceil(m.t)+"s",mx2,my2-24);
       ctx.globalAlpha=1;}
-    // gems
+    // gems: pedras lapidadas com faceta superior clara
     for(const g of this.gems){const gx=g.x+ox,gy=g.y+oy;
       if(gx<-20||gx>W+20||gy<-20||gy>H+20)continue;
-      glow(gx,gy,g.big?13:8,g.big?GLOW.gold:GLOW.cyan,.55);
-      ctx.fillStyle=g.big?"#ffd24d":"#7be3ff";
-      ctx.save();ctx.translate(gx,gy);ctx.rotate(this.time*2);
-      const s2=g.big?7:5;ctx.fillRect(-s2/2,-s2/2,s2,s2);ctx.restore();}
+      glow(gx,gy,g.big?14:9,g.big?GLOW.gold:GLOW.cyan,.55);
+      ctx.save();ctx.translate(gx,gy);ctx.rotate(Math.sin(this.time*2+g.x*.1)*.4);
+      const s2=g.big?7.5:5.2;
+      ctx.fillStyle=g.big?"#e9b53a":"#4fa8e8";
+      ctx.beginPath();ctx.moveTo(0,-s2*1.3);ctx.lineTo(s2,0);ctx.lineTo(0,s2*1.3);ctx.lineTo(-s2,0);
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle=g.big?"#ffe9a8":"#bfe8ff";
+      ctx.beginPath();ctx.moveTo(0,-s2*1.3);ctx.lineTo(s2*.5,-s2*.18);ctx.lineTo(-s2*.5,-s2*.18);
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.9)";ctx.fillRect(-s2*.18,-s2*.75,s2*.28,s2*.28);
+      ctx.restore();}
     // pickups
     for(const k of this.pickups){const kx=k.x+ox,ky=k.y+oy;
       if(kx<-30||kx>W+30||ky<-30||ky>H+30)continue;
@@ -1619,8 +1740,8 @@ const Game={
     ctx.textAlign="center";
     for(const d of this.dnums){ctx.globalAlpha=Math.min(1,d.t*2);
       const pop=1+Math.max(0,(d.t-.55))*2.2,
-            size=Math.round((d.crit?21:14)*pop);
-      ctx.font="bold "+size+"px 'Segoe UI'";
+            size=Math.round((d.crit?22:14)*pop);
+      ctx.font="bold "+size+"px "+(d.crit?"Palatino, Georgia, serif":"'Segoe UI'");
       ctx.fillStyle="#000";ctx.fillText(d.v,d.x+ox+1,d.y+oy+1);
       ctx.fillStyle=d.col;ctx.fillText(d.v,d.x+ox,d.y+oy)}
     ctx.globalAlpha=1;
@@ -1640,22 +1761,63 @@ const Game={
     const vg2=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.45,W/2,H/2,Math.max(W,H)*.75);
     vg2.addColorStop(0,"rgba(0,0,0,0)");vg2.addColorStop(1,"rgba(5,0,15,.4)");
     ctx.fillStyle=vg2;ctx.fillRect(0,0,W,H);
+    // faixa cerimonial de entrada do boss: letterbox + nome em ouro
+    if(this.banner){const bn=this.banner;
+      {
+        const prog=1-bn.t/bn.max,
+              aIn=Math.min(1,prog*5), aOut=Math.min(1,bn.t/.7), a=Math.min(aIn,aOut);
+        const barH=H*.11*Math.min(1,prog*4);
+        ctx.fillStyle=`rgba(2,4,10,${.85*a})`;
+        ctx.fillRect(0,0,W,barH);ctx.fillRect(0,H-barH,W,barH);
+        ctx.globalAlpha=a;
+        // filetes dourados
+        ctx.strokeStyle="rgba(217,180,74,.8)";ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(0,barH);ctx.lineTo(W,barH);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(0,H-barH);ctx.lineTo(W,H-barH);ctx.stroke();
+        // nome do boss em ouro serifado
+        ctx.textAlign="center";
+        const ty=H*.30;
+        const gld=ctx.createLinearGradient(0,ty-26,0,ty+8);
+        gld.addColorStop(0,"#f8ecc2");gld.addColorStop(.5,"#d9b44a");gld.addColorStop(1,"#8a5f1d");
+        ctx.font="bold 40px Palatino, Georgia, serif";
+        ctx.fillStyle="rgba(0,0,0,.85)";ctx.fillText(bn.nm,W/2+2,ty+2);
+        ctx.fillStyle=gld;ctx.fillText(bn.nm,W/2,ty);
+        ctx.font="italic 17px Palatino, Georgia, serif";
+        ctx.fillStyle="rgba(222,210,180,.85)";ctx.fillText("“"+bn.lore+"”",W/2,ty+30);
+        ctx.font="15px serif";ctx.fillStyle="rgba(217,180,74,.7)";
+        ctx.fillText("᛫ ❖ ᛫",W/2,ty+56);
+        ctx.globalAlpha=1;
+      }}
   },
   drawPlayer(x,y){
     const p=this.p,c=CHARS[p.char];
+    // luz de tocha ao redor do herói (sempre, mesmo piscando)
+    glow(x,y+4,46,GLOW.gold,.14);
     if(p.hurtT>0&&Math.floor(p.hurtT*16)%2)return; // pisca quando ferido
-    const bob=Math.abs(Math.sin(p.walkT))*2;
+    const bob=Math.abs(Math.sin(p.walkT))*2,
+          sway=Math.sin(p.walkT*.5)*1.5; // ondular da capa
     // sombra
     ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.ellipse(x,y+12,11,4,0,0,TAU);ctx.fill();
-    // capa
+    // capa em dois tons, esvoaçante
     ctx.fillStyle=c.col;ctx.beginPath();
-    ctx.moveTo(x-9,y-6-bob);ctx.lineTo(x+9,y-6-bob);ctx.lineTo(x+12,y+10);ctx.lineTo(x-12,y+10);ctx.fill();
+    ctx.moveTo(x-9,y-6-bob);ctx.lineTo(x+9,y-6-bob);
+    ctx.lineTo(x+12+sway,y+10);ctx.lineTo(x-12+sway,y+10);ctx.fill();
+    ctx.fillStyle="rgba(0,0,20,.35)"; // metade inferior sombreada
+    ctx.beginPath();ctx.moveTo(x-10.5+sway*.5,y+2-bob*.5);ctx.lineTo(x+10.5+sway*.5,y+2-bob*.5);
+    ctx.lineTo(x+12+sway,y+10);ctx.lineTo(x-12+sway,y+10);ctx.fill();
+    // debrum dourado na barra da capa
+    ctx.strokeStyle="rgba(217,180,74,.8)";ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(x-12+sway,y+10);ctx.lineTo(x+12+sway,y+10);ctx.stroke();
     // corpo
-    ctx.fillStyle="#2a2438";ctx.fillRect(x-7,y-4-bob,14,14);
+    ctx.fillStyle="#232c44";ctx.fillRect(x-7,y-4-bob,14,14);
+    // broche dourado
+    ctx.fillStyle="#e9cd7a";ctx.beginPath();ctx.arc(x,y-3-bob,2,0,TAU);ctx.fill();
     // cabeça
     ctx.fillStyle="#f0d6b8";ctx.beginPath();ctx.arc(x,y-10-bob,7,0,TAU);ctx.fill();
-    // capuz
+    // capuz com luz de borda
     ctx.fillStyle=c.col;ctx.beginPath();ctx.arc(x,y-12-bob,7,Math.PI,TAU);ctx.fill();
+    ctx.strokeStyle="rgba(255,245,210,.5)";ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.arc(x,y-12-bob,7,Math.PI*1.1,Math.PI*1.6);ctx.stroke();
     // olhos na direção
     ctx.fillStyle="#1a1426";
     ctx.fillRect(x-3+p.faceX*2,y-11-bob,2,3);ctx.fillRect(x+1+p.faceX*2,y-11-bob,2,3);
@@ -1665,39 +1827,72 @@ const Game={
     ctx.fillStyle="rgba(0,0,0,.3)";ctx.beginPath();ctx.ellipse(x,y+e.r*.8,e.r*.8,e.r*.3,0,0,TAU);ctx.fill();
     if(e.boss)glow(x,y,e.r*2.4,e.final?GLOW.gold:GLOW.purple,.45);
     else if(e.elite)glow(x,y,e.r*2,GLOW.gold,.35);
-    ctx.fillStyle=flash?"#fff":(this.frozen>0?"#9fd8ff":e.col);
+    const col=flash?"#fff":(this.frozen>0?"#9fd8ff":e.col);
+    ctx.fillStyle=col;
     const r=e.r,wob=Math.sin(this.time*6+e.phase)*2;
+    // traço de tinta: contorno escuro de ilustração de livro
+    const ink=()=>{ctx.strokeStyle="rgba(4,7,16,.6)";ctx.lineWidth=Math.max(1.5,r*.12);ctx.stroke()};
     switch(e.shape){
-      case"blob":ctx.beginPath();ctx.arc(x,y+wob*.3,r,0,TAU);ctx.fill();
-        ctx.beginPath();ctx.arc(x-r*.4,y-r*.5+wob*.3,r*.35,0,TAU);ctx.fill();break;
+      case"blob":ctx.beginPath();ctx.arc(x,y+wob*.3,r,0,TAU);ctx.fill();ink();
+        ctx.fillStyle="rgba(255,255,255,.18)"; // luz de cima
+        ctx.beginPath();ctx.arc(x-r*.25,y-r*.3+wob*.3,r*.5,0,TAU);ctx.fill();
+        ctx.fillStyle=col;
+        ctx.beginPath();ctx.arc(x-r*.4,y-r*.5+wob*.3,r*.35,0,TAU);ctx.fill();ink();break;
       case"tri":ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(this.p.y-e.y,this.p.x-e.x));
-        ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(-r,-r*.8);ctx.lineTo(-r,r*.8);ctx.fill();ctx.restore();break;
+        ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(-r,-r*.8);ctx.lineTo(-r,r*.8);ctx.closePath();
+        ctx.fill();ink();ctx.restore();break;
       case"sq":ctx.fillRect(x-r,y-r,r*2,r*2);
-        ctx.fillStyle=flash?"#fff":"#5a68b0";ctx.fillRect(x-r,y-r,r*2,r*.5);break;
+        ctx.fillStyle=flash?"#fff":"#5a68b0";ctx.fillRect(x-r,y-r,r*2,r*.5);
+        ctx.strokeStyle="rgba(4,7,16,.6)";ctx.lineWidth=Math.max(1.5,r*.12);
+        ctx.strokeRect(x-r,y-r,r*2,r*2);break;
       case"bomb":{const pu=1+Math.sin(this.time*10)*.12;
-        ctx.beginPath();ctx.arc(x,y,r*pu,0,TAU);ctx.fill();
-        ctx.strokeStyle="#ffe28a";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y-r*pu);ctx.lineTo(x+4,y-r*pu-6);ctx.stroke();break}
-      case"dia":ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.fillRect(-r*.8,-r*.8,r*1.6,r*1.6);ctx.restore();break;
+        ctx.beginPath();ctx.arc(x,y,r*pu,0,TAU);ctx.fill();ink();
+        ctx.strokeStyle="#ffe28a";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y-r*pu);ctx.lineTo(x+4,y-r*pu-6);ctx.stroke();
+        glow(x+4,y-r*pu-7,5,GLOW.orange,.8);break}
+      case"dia":ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);
+        ctx.fillRect(-r*.8,-r*.8,r*1.6,r*1.6);
+        ctx.strokeStyle="rgba(4,7,16,.6)";ctx.lineWidth=1.8;ctx.strokeRect(-r*.8,-r*.8,r*1.6,r*1.6);
+        ctx.restore();break;
       case"pent":{ctx.beginPath();for(let k=0;k<5;k++){const a=k/5*TAU-Math.PI/2;
-        ctx[k?"lineTo":"moveTo"](x+Math.cos(a)*r,y+Math.sin(a)*r)}ctx.fill();break}
-      case"wing":{ctx.beginPath();ctx.arc(x,y+wob,r*.7,0,TAU);ctx.fill();
-        const fl=Math.sin(this.time*14+e.phase)*r*.5;
-        ctx.beginPath();ctx.ellipse(x-r,y+wob,r*.7,Math.abs(fl)+2,.4,0,TAU);ctx.fill();
-        ctx.beginPath();ctx.ellipse(x+r,y+wob,r*.7,Math.abs(fl)+2,-.4,0,TAU);ctx.fill();break}
-      case"shield":{ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
+        ctx[k?"lineTo":"moveTo"](x+Math.cos(a)*r,y+Math.sin(a)*r)}ctx.closePath();ctx.fill();ink();break}
+      case"wing":{const fl=Math.sin(this.time*14+e.phase)*r*.5;
+        ctx.beginPath();ctx.ellipse(x-r,y+wob,r*.7,Math.abs(fl)+2,.4,0,TAU);ctx.fill();ink();
+        ctx.beginPath();ctx.ellipse(x+r,y+wob,r*.7,Math.abs(fl)+2,-.4,0,TAU);ctx.fill();ink();
+        ctx.fillStyle=col;
+        ctx.beginPath();ctx.arc(x,y+wob,r*.7,0,TAU);ctx.fill();ink();break}
+      case"shield":{ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ink();
         const a=Math.atan2(this.p.y-e.y,this.p.x-e.x);
         ctx.strokeStyle=flash?"#fff":"#d8e0ec";ctx.lineWidth=5;
-        ctx.beginPath();ctx.arc(x,y,r+4,a-.8,a+.8);ctx.stroke();break}
-      case"drip":{ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
-        ctx.beginPath();ctx.arc(x,y+r+wob,3,0,TAU);ctx.fill();break}
+        ctx.beginPath();ctx.arc(x,y,r+4,a-.8,a+.8);ctx.stroke();
+        ctx.strokeStyle="rgba(217,180,74,.5)";ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(x,y,r+7,a-.8,a+.8);ctx.stroke();break}
+      case"drip":{ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ink();
+        ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y+r+wob,3,0,TAU);ctx.fill();break}
       case"boss":{const pu=1+Math.sin(this.time*3)*.04;
         ctx.save();ctx.translate(x,y);ctx.scale(pu,pu);
-        ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();
+        // chifres de dragão
+        ctx.fillStyle=col;
+        ctx.beginPath();ctx.moveTo(-r*.45,-r*.6);ctx.quadraticCurveTo(-r*1.15,-r*1.1,-r*.85,-r*1.5);
+        ctx.quadraticCurveTo(-r*.7,-r*1.0,-r*.15,-r*.85);ctx.closePath();ctx.fill();ink();
+        ctx.beginPath();ctx.moveTo(r*.45,-r*.6);ctx.quadraticCurveTo(r*1.15,-r*1.1,r*.85,-r*1.5);
+        ctx.quadraticCurveTo(r*.7,-r*1.0,r*.15,-r*.85);ctx.closePath();ctx.fill();ink();
+        // cabeça
+        ctx.fillStyle=col;
+        ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();ink();
+        // escamas no topo
+        ctx.strokeStyle="rgba(0,0,0,.25)";ctx.lineWidth=1.5;
+        for(let row=0;row<3;row++)for(let k=-2;k<=2;k++){
+          ctx.beginPath();ctx.arc(k*r*.3,-r*.25-row*r*.22,r*.14,Math.PI*.15,Math.PI*.85);ctx.stroke()}
+        // focinho sombreado
         ctx.fillStyle=flash?"#fff":"rgba(0,0,0,.3)";
-        ctx.beginPath();ctx.arc(0,0,r*.65,0,TAU);ctx.fill();
-        ctx.fillStyle="#ff3355";
-        ctx.beginPath();ctx.arc(-r*.25,-r*.15,r*.12,0,TAU);ctx.fill();
-        ctx.beginPath();ctx.arc(r*.25,-r*.15,r*.12,0,TAU);ctx.fill();
+        ctx.beginPath();ctx.arc(0,r*.18,r*.62,0,TAU);ctx.fill();
+        // olhos de réptil: brasa dourada com pupila vertical
+        for(const sgn of[-1,1]){
+          glow(sgn*r*.3,-r*.15,r*.3,e.final?GLOW.gold:GLOW.red,.8);
+          ctx.fillStyle=e.final?"#ffd24d":"#ff3355";
+          ctx.beginPath();ctx.ellipse(sgn*r*.3,-r*.15,r*.14,r*.11,0,0,TAU);ctx.fill();
+          ctx.fillStyle="#10040a";
+          ctx.beginPath();ctx.ellipse(sgn*r*.3,-r*.15,r*.035,r*.1,0,0,TAU);ctx.fill()}
         ctx.restore();break}
     }
     // olhos genéricos
