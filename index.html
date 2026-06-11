@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eclipse Survivors</title>
 <style>
 :root{
@@ -16,7 +16,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
 canvas{display:block;position:fixed;inset:0}
 .screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;
   justify-content:flex-start;overflow-y:auto;padding:20px;z-index:10;
-  background:radial-gradient(ellipse at 50% -10%, #2a1f45 0%, var(--bg) 60%)}
+  background:radial-gradient(ellipse at 50% -10%, rgba(42,31,69,.88) 0%, rgba(13,10,20,.82) 60%)}
 .screen.on{display:flex}
 .overlay{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;
   justify-content:center;z-index:20;background:rgba(8,5,16,.82);backdrop-filter:blur(3px);padding:16px;overflow-y:auto}
@@ -104,9 +104,17 @@ h2{margin:8px 0 14px;font-size:22px;letter-spacing:1px}
 .modItem.sel{border-color:#ff6b6b;background:#2c1622}
 .modItem .nm{font-weight:700;font-size:14px}
 .modItem .rw{color:var(--gold);font-size:12px;margin-top:3px}
-#joy{position:fixed;width:120px;height:120px;border-radius:50%;background:#ffffff14;border:2px solid #ffffff30;
-  display:none;z-index:6;pointer-events:none}
-#joyKnob{position:absolute;width:52px;height:52px;border-radius:50%;background:#ffffff35;left:34px;top:34px}
+#buffs{position:fixed;bottom:76px;left:50%;transform:translateX(-50%);display:flex;gap:8px;
+  font-size:13px;font-weight:700;text-shadow:0 2px 4px #000}
+#buffs span{background:#000a;border:1px solid var(--line);border-radius:8px;padding:3px 9px}
+.merchItem{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:10px 14px;width:min(440px,92vw);margin:4px}
+.merchItem .info{flex:1;text-align:left}
+.merchItem .nm{font-weight:700;font-size:15px}
+.merchItem .ds{font-size:12.5px;color:var(--dim)}
+.colGrid{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:6px}
+.colGrid span{margin:2px;display:inline-block;padding:6px 10px;background:var(--panel);
+  border:1px solid var(--line);border-radius:8px;font-size:13.5px}
 .kbd{background:#000a;border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:13px}
 small.hint{color:var(--dim)}
 .weapList{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:520px;margin:6px 0}
@@ -126,8 +134,8 @@ small.hint{color:var(--dim)}
   <div id="bossBar"><div class="nm" id="bossNm"></div><div class="bar"><div class="fill" id="bossFill"></div></div></div>
   <div id="hpBar"><div id="hpFill"></div></div>
   <div id="tut" style="display:none"></div>
+  <div id="buffs"></div>
   <button id="pauseBtn">⏸</button>
-  <div id="joy"><div id="joyKnob"></div></div>
 </div>
 <div id="toast"></div>
 
@@ -142,8 +150,8 @@ small.hint{color:var(--dim)}
   <button class="btn" onclick="UI.collection()">📖 &nbsp;Coleção</button>
   <button class="btn" onclick="UI.settings()">⚙ &nbsp;Configurações</button>
   <div style="margin-top:22px;color:var(--dim);font-size:13px;text-align:center;line-height:1.7">
-    <span class="kbd">WASD</span>/<span class="kbd">setas</span> mover • ataques automáticos • <span class="kbd">ESC</span> pausa<br>
-    Em celulares, use o joystick virtual. Progresso salvo localmente.
+    <span class="kbd">WASD</span>/<span class="kbd">setas</span> mover • ataques automáticos • <span class="kbd">ESC</span> pausa • <span class="kbd">1–4</span> escolher melhorias<br>
+    Feito para PC — teclado e mouse. Progresso salvo localmente.
   </div>
   <div id="menuStats" style="margin-top:18px;color:var(--dim);font-size:13px;text-align:center"></div>
 </div>
@@ -212,6 +220,7 @@ small.hint{color:var(--dim)}
     <button class="btn small" id="btnSkip"></button>
   </div>
   <small class="hint" id="banishHint" style="display:none;margin-top:6px">Modo banir: clique numa carta para removê-la da partida.</small>
+  <small class="hint" style="margin-top:8px"><span class="kbd">1–4</span> escolher • <span class="kbd">R</span> reroll • <span class="kbd">B</span> banir • <span class="kbd">S</span> pular</small>
 </div>
 
 <!-- ============ CHEST ============ -->
@@ -220,6 +229,16 @@ small.hint{color:var(--dim)}
   <h2 id="chestTitle">Baú encontrado!</h2>
   <div class="grid" id="chestBody"></div>
   <button class="btn primary" onclick="Game.closeChest()">Coletar</button>
+</div>
+
+<!-- ============ MERCHANT ============ -->
+<div class="overlay" id="ovMerch">
+  <div style="font-size:56px">🧙</div>
+  <h2>Comerciante Errante</h2>
+  <div style="color:var(--dim);font-size:13.5px;margin-bottom:8px">"Moedas pela sobrevivência, viajante. Tenho pouco tempo..."</div>
+  <div style="color:var(--gold);font-weight:700;margin-bottom:8px" id="merchCoins"></div>
+  <div id="merchList" style="display:flex;flex-direction:column;align-items:center"></div>
+  <button class="btn primary" style="margin-top:10px" onclick="Game.closeMerch()">Seguir viagem</button>
 </div>
 
 <!-- ============ PAUSE ============ -->
@@ -265,6 +284,24 @@ const TAU=Math.PI*2, rnd=(a,b)=>a+Math.random()*(b-a), rndi=(a,b)=>Math.floor(rn
       pick=a=>a[Math.floor(Math.random()*a.length)], lerp=(a,b,t)=>a+(b-a)*t;
 const fmtT=s=>{s=Math.floor(s);return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
 
+/* ---------- sprites de brilho (pré-renderizados; baratos de desenhar) ---------- */
+function makeGlow(col){const c=document.createElement("canvas");c.width=c.height=64;
+  const g=c.getContext("2d"),gr=g.createRadialGradient(32,32,2,32,32,32);
+  gr.addColorStop(0,col);gr.addColorStop(.4,col.replace(")",",.45)").replace("rgb","rgba"));
+  gr.addColorStop(1,"rgba(0,0,0,0)");
+  g.fillStyle=gr;g.fillRect(0,0,64,64);return c}
+const GLOW={
+  cyan:makeGlow("rgb(123,227,255)"), gold:makeGlow("rgb(255,210,77)"),
+  purple:makeGlow("rgb(192,106,255)"), red:makeGlow("rgb(255,85,102)"),
+  green:makeGlow("rgb(123,232,138)"), white:makeGlow("rgb(255,255,255)"),
+  orange:makeGlow("rgb(255,179,107)")
+};
+function glow(x,y,r,spr,alpha=1){ctx.save();ctx.globalCompositeOperation="lighter";
+  ctx.globalAlpha=alpha;ctx.drawImage(spr,x-r,y-r,r*2,r*2);ctx.restore()}
+/* estrelas do fundo do menu */
+const MENU_STARS=Array.from({length:140},()=>({x:Math.random(),y:Math.random(),
+  s:Math.random()*1.8+.4,ph:Math.random()*TAU,sp:Math.random()*.6+.2}));
+
 /* ================= SAVE ================= */
 const SAVE_KEY="eclipseSurvivors_v1";
 let memStore={};
@@ -274,12 +311,13 @@ const store={
   del(){try{localStorage.removeItem(SAVE_KEY)}catch(e){delete memStore[SAVE_KEY]}}
 };
 const defMeta=()=>({coins:0,shop:{},chars:{arlen:1,mira:1,brakk:1},maps:{floresta:1},ach:{},
-  disc:{w:{},e:{}},infinite:0,
-  stats:{kills:0,coins:0,games:0,bestTime:0,bestLevel:0,playTime:0,bossKills:0,evolutions:0},
+  disc:{w:{},e:{},en:{},b:{}},infinite:0,
+  stats:{kills:0,coins:0,games:0,bestTime:0,bestLevel:0,playTime:0,bossKills:0,evolutions:0,wins:0},
   settings:{master:.8,music:.55,sfx:.8,dmgNums:1,shake:1,mute:0}});
 let meta=defMeta();
 try{const raw=store.get();if(raw){const m=JSON.parse(raw);meta=Object.assign(defMeta(),m);
-  meta.stats=Object.assign(defMeta().stats,m.stats||{});meta.settings=Object.assign(defMeta().settings,m.settings||{});}}catch(e){}
+  meta.stats=Object.assign(defMeta().stats,m.stats||{});meta.settings=Object.assign(defMeta().settings,m.settings||{});
+  meta.disc=Object.assign(defMeta().disc,m.disc||{});}}catch(e){}
 const save=()=>store.set(JSON.stringify(meta));
 
 /* ================= AUDIO (WebAudio sintetizado) ================= */
@@ -321,50 +359,65 @@ const Aud={ctx:null,master:null,mGain:null,sGain:null,musTimer:null,beat:0,mode:
     case"zap":this.tone(900,.08,"sawtooth",.09,-500);this.noise(.06,.07);break;
   }},
   startMusic(mode){this.mode=mode||"calm";if(!this.ctx)return;this.stopMusic();this.beat=0;
-    this.musTimer=setInterval(()=>this.step(),170);},
+    this.musTimer=setInterval(()=>this.step(),this.mode==="boss"?150:170);},
   stopMusic(){if(this.musTimer){clearInterval(this.musTimer);this.musTimer=null}},
-  step(){if(!this.ctx||meta.settings.mute)return;const b=this.beat++;
-    const scale=this.mode==="boss"?[110,131,147,165,196]:[131,147,165,196,220,262];
+  /* progressão i–VI–III–VII em Lá menor; cada modo tem timbre e densidade próprios */
+  CHORDS:[[110,130.81,164.81],[87.31,110,130.81],[130.81,164.81,196],[98,123.47,146.83]],
+  step(){if(!this.ctx||meta.settings.mute)return;const b=this.beat++,m=this.mode;
+    const bar=Math.floor(b/8)%4, chord=this.CHORDS[bar], root=chord[0];
     const t=this.ctx.currentTime;
-    const note=(f,dur,vol,type)=>{const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    const note=(f,dur,vol,type,dest)=>{const o=this.ctx.createOscillator(),g=this.ctx.createGain();
       o.type=type;o.frequency.value=f;g.gain.setValueAtTime(vol,t);
-      g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g);g.connect(this.mGain);o.start(t);o.stop(t+dur)};
-    if(b%4===0)note(scale[0]/2,(this.mode==="boss"?.3:.45),.25,"triangle");          // baixo
-    if(this.mode==="boss"&&b%2===1)note(scale[0]/2*1.5,.2,.15,"sawtooth");
-    if(b%2===0&&Math.random()<.8)note(pick(scale)*2,.3,.08,"square");                 // arpejo
-    if(b%8===6&&Math.random()<.6)note(pick(scale)*4,.5,.05,"sine");                   // brilho
+      g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g);g.connect(dest||this.mGain);o.start(t);o.stop(t+dur)};
+    const hat=vol=>{const n=this.ctx.sampleRate*.04,buf=this.ctx.createBuffer(1,n,this.ctx.sampleRate),
+      d=buf.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
+      const s=this.ctx.createBufferSource(),g=this.ctx.createGain();s.buffer=buf;
+      g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+.04);
+      s.connect(g);g.connect(this.mGain);s.start(t)};
+    if(m==="menu"){ // pad lento e contemplativo
+      if(b%16===0)for(const f of chord)note(f,2.4,.05,"sine");
+      if(b%8===4)note(chord[rndi(0,2)]*2,1.2,.04,"triangle");
+      if(b%32===24)note(root*4,1.6,.025,"sine");
+      return}
+    if(m==="boss"){ // marcha agressiva
+      note(root/2,.16,b%2?.13:.22,"sawtooth");
+      if(b%2===0)hat(.05);
+      if(b%4===2)note(root/2*1.5,.18,.12,"sawtooth");
+      if(Math.random()<.7)note(chord[b%3]*2,.2,.07,"square");
+      if(b%8===7)note(chord[2]*4,.3,.05,"sine");
+      return}
+    // calm / dark / arc — camadas: baixo, arpejo, pad, brilho
+    const dark=m==="dark",arc=m==="arc";
+    if(b%4===0)note(root/(dark?4:2),.5,.22,"triangle");
+    if(b%8===0)for(const f of chord)note(f*(dark?.5:1),1.4,.035,"sine");
+    if(b%2===0&&Math.random()<(arc?.9:.7))note(chord[(b/2)%3]*2,.3,.07,arc?"triangle":"square");
+    if(b%4===2&&!dark)hat(.02);
+    if(b%8===6&&Math.random()<.6)note(chord[rndi(0,2)]*4,.5,.04,"sine");
+    if(dark&&b%16===12)note(root*1.0595,.8,.05,"sawtooth"); // tensão de semitom
   }
 };
-addEventListener("pointerdown",()=>{Aud.init();if(Aud.ctx&&Aud.ctx.state==="suspended")Aud.ctx.resume()},{passive:true});
+addEventListener("pointerdown",()=>{Aud.init();if(Aud.ctx&&Aud.ctx.state==="suspended")Aud.ctx.resume();
+  if(Aud.ctx&&!Aud.musTimer&&Game.state==="menu")Aud.startMusic("menu")},{passive:true});
 
-/* ================= INPUT ================= */
-const Input={keys:{},joy:{active:false,id:null,bx:0,by:0,dx:0,dy:0},
+/* ================= INPUT (somente teclado e mouse — jogo exclusivo para PC) ================= */
+const Input={keys:{},
   axis(){let x=0,y=0;
     if(this.keys.KeyA||this.keys.ArrowLeft)x--; if(this.keys.KeyD||this.keys.ArrowRight)x++;
     if(this.keys.KeyW||this.keys.ArrowUp)y--; if(this.keys.KeyS||this.keys.ArrowDown)y++;
-    if(this.joy.active){x+=this.joy.dx;y+=this.joy.dy}
-    const gp=navigator.getGamepads&&navigator.getGamepads()[0];
-    if(gp){if(Math.abs(gp.axes[0])>.2)x+=gp.axes[0];if(Math.abs(gp.axes[1])>.2)y+=gp.axes[1];
-      if(gp.buttons[9]&&gp.buttons[9].pressed&&!this._gpP){this._gpP=1;if(Game.state==="play")Game.pause()}
-      else if(!(gp.buttons[9]&&gp.buttons[9].pressed))this._gpP=0;}
     const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}return{x,y}}};
 addEventListener("keydown",e=>{Input.keys[e.code]=1;
-  if(e.code==="Escape"){if(Game.state==="play")Game.pause();else if(Game.state==="pause")Game.resume()}});
+  if(e.code==="Escape"){
+    if(Game.state==="play")Game.pause();
+    else if(Game.state==="pause")Game.resume();
+    else if(Game.state==="merch")Game.closeMerch();}
+  if(Game.state==="level"){ // atalhos de teclado nas cartas
+    if(/^Digit[1-4]$/.test(e.code)){const c=$("lvlCards").children[+e.code.slice(5)-1];if(c)c.click()}
+    else if(e.code==="KeyR")$("btnReroll").click();
+    else if(e.code==="KeyB")$("btnBanish").click();
+    else if(e.code==="KeyS")$("btnSkip").click();}
+  else if(Game.state==="chest"&&(e.code==="Enter"||e.code==="Space"))Game.closeChest();
+  else if(Game.state==="end"&&e.code==="Enter")UI.charSelect();});
 addEventListener("keyup",e=>Input.keys[e.code]=0);
-// joystick virtual (mobile)
-const joyEl=$("joy"),knob=$("joyKnob");
-addEventListener("touchstart",e=>{if(Game.state!=="play")return;
-  for(const t of e.changedTouches){if(t.clientX<W*.6&&!Input.joy.active){
-    Input.joy.active=true;Input.joy.id=t.identifier;Input.joy.bx=t.clientX;Input.joy.by=t.clientY;
-    joyEl.style.display="block";joyEl.style.left=(t.clientX-60)+"px";joyEl.style.top=(t.clientY-60)+"px";}}},{passive:true});
-addEventListener("touchmove",e=>{for(const t of e.changedTouches){if(t.identifier===Input.joy.id){
-  let dx=t.clientX-Input.joy.bx,dy=t.clientY-Input.joy.by;const l=Math.hypot(dx,dy),max=46;
-  if(l>max){dx=dx/l*max;dy=dy/l*max}
-  Input.joy.dx=dx/max;Input.joy.dy=dy/max;
-  knob.style.left=(34+dx)+"px";knob.style.top=(34+dy)+"px";}}},{passive:true});
-addEventListener("touchend",e=>{for(const t of e.changedTouches){if(t.identifier===Input.joy.id){
-  Input.joy.active=false;Input.joy.dx=Input.joy.dy=0;joyEl.style.display="none";
-  knob.style.left="34px";knob.style.top="34px";}}},{passive:true});
 $("pauseBtn").onclick=()=>{if(Game.state==="play")Game.pause()};
 
 /* ================= DADOS — PERSONAGENS ================= */
@@ -446,15 +499,15 @@ const MAXW=6,MAXP=6,WMAX=8,PMAX=5;
 
 /* ================= DADOS — INIMIGOS ================= */
 const ETYPES={
-  basico:{hp:9,spd:55,dmg:8,xp:1,r:11,col:"#c75b8a",shape:"blob"},
-  rapido:{hp:6,spd:115,dmg:6,xp:1,r:9,col:"#e8a14f",shape:"tri"},
-  tanque:{hp:48,spd:32,dmg:14,xp:3,r:18,col:"#7a89d4",shape:"sq"},
-  explosivo:{hp:12,spd:78,dmg:24,xp:2,r:11,col:"#ff6b4d",shape:"bomb",explode:1},
-  atirador:{hp:16,spd:48,dmg:9,xp:3,r:12,col:"#5fc9a8",shape:"dia",ranged:1},
-  invocador:{hp:34,spd:36,dmg:10,xp:5,r:15,col:"#b06be8",shape:"pent",summoner:1},
-  voador:{hp:8,spd:95,dmg:7,xp:2,r:10,col:"#8fd9ff",shape:"wing",fly:1},
-  escudo:{hp:30,spd:44,dmg:11,xp:3,r:13,col:"#9aa6b8",shape:"shield",shield:1},
-  venenoso:{hp:20,spd:50,dmg:9,xp:3,r:12,col:"#8fe05a",shape:"drip",poison:1},
+  basico:{nm:"Rastejante",hp:9,spd:55,dmg:8,xp:1,r:11,col:"#c75b8a",shape:"blob"},
+  rapido:{nm:"Lacaio Veloz",hp:6,spd:115,dmg:6,xp:1,r:9,col:"#e8a14f",shape:"tri"},
+  tanque:{nm:"Brutamontes",hp:48,spd:32,dmg:14,xp:3,r:18,col:"#7a89d4",shape:"sq"},
+  explosivo:{nm:"Estourador",hp:12,spd:78,dmg:24,xp:2,r:11,col:"#ff6b4d",shape:"bomb",explode:1},
+  atirador:{nm:"Cuspidor",hp:16,spd:48,dmg:9,xp:3,r:12,col:"#5fc9a8",shape:"dia",ranged:1},
+  invocador:{nm:"Chamador",hp:34,spd:36,dmg:10,xp:5,r:15,col:"#b06be8",shape:"pent",summoner:1},
+  voador:{nm:"Asa Noturna",hp:8,spd:95,dmg:7,xp:2,r:10,col:"#8fd9ff",shape:"wing",fly:1},
+  escudo:{nm:"Sentinela",hp:30,spd:44,dmg:11,xp:3,r:13,col:"#9aa6b8",shape:"shield",shield:1},
+  venenoso:{nm:"Gosmento",hp:20,spd:50,dmg:9,xp:3,r:12,col:"#8fe05a",shape:"drip",poison:1},
 };
 const ELITE_MODS=[
   {nm:"Gigante",f:e=>{e.hp*=2;e.maxhp*=2;e.r*=1.3}},
@@ -472,7 +525,9 @@ const BOSSES={
     lore:"Teleporta e amaldiçoa o chão."},
   colosso:{nm:"Colosso das Cinzas",hp:5200,spd:26,dmg:26,r:46,col:"#ff8a5a",pattern:"colosso",
     lore:"Cada passo incendeia a terra."},
-  devorador:{nm:"DEVORADOR DE ESTRELAS",hp:12000,spd:60,dmg:30,r:56,col:"#ffd24d",pattern:"devorador",final:1,
+  arauto:{nm:"Arauto do Vazio",hp:8500,spd:48,dmg:24,r:40,col:"#7a5aff",pattern:"arauto",
+    lore:"Onde ele anda, a gravidade ajoelha."},
+  devorador:{nm:"DEVORADOR DE ESTRELAS",hp:14000,spd:60,dmg:30,r:56,col:"#ffd24d",pattern:"devorador",final:1,
     lore:"O fim de tudo, com fome."}
 };
 /* ================= DADOS — MAPAS ================= */
@@ -485,7 +540,19 @@ const MAPS={
   deserto:{nm:"Deserto de Vidro",ic:"🏜",ground:"#2a2418",ground2:"#332c1d",deco:"cactus",
     ds:"Areia que corta e luz que cega. Evento: tempestade de vidro. (+30% inimigos)",
     ev:"tempestade",mult:1.3,unlock:m=>m.stats.bossKills>=1,lkTxt:"Derrote 1 boss"},
+  ruinas:{nm:"Cidade em Ruínas",ic:"🏚",ground:"#191d26",ground2:"#222836",deco:"ruin",
+    ds:"Torres antigas ainda vigiam a cidade morta. Evento: torres disparam raios. (+40% inimigos)",
+    ev:"torres",mult:1.4,unlock:m=>m.stats.bestTime>=900,lkTxt:"Sobreviva 15 minutos"},
+  biblioteca:{nm:"Biblioteca Infinita",ic:"📚",ground:"#231a12",ground2:"#2d2218",deco:"shelf",
+    ds:"Corredores de saber proibido. Evento: páginas amaldiçoadas caem do céu. (+55% inimigos)",
+    ev:"paginas",mult:1.55,unlock:m=>m.stats.evolutions>=3,lkTxt:"Faça 3 evoluções (total)"},
+  abismo:{nm:"Abismo Astral",ic:"🌌",ground:"#0a0a1e",ground2:"#13132e",deco:"star",
+    ds:"O fim do mapa, o começo do nada. Evento: gravidade instável. (+75% inimigos)",
+    ev:"gravidade",mult:1.75,unlock:m=>m.stats.wins>=1,lkTxt:"Vença uma partida"},
 };
+// trilha sonora de cada mapa
+MAPS.floresta.mus="calm";MAPS.cripta.mus="dark";MAPS.deserto.mus="calm";
+MAPS.ruinas.mus="dark";MAPS.biblioteca.mus="arc";MAPS.abismo.mus="dark";
 /* ================= DADOS — MODIFICADORES ================= */
 const MODS=[
   {id:"hp25",nm:"Hordas Resistentes",ds:"Inimigos têm +25% de vida",mult:.25,f:g=>g.eHpMul*=1.25},
@@ -494,7 +561,13 @@ const MODS=[
   {id:"nocure",nm:"Jejum",ds:"Sem itens de cura",mult:.25,f:g=>g.noCure=1},
   {id:"lessxp",nm:"Eclipse Total",ds:"-25% de XP dropado",mult:.35,f:g=>g.xpDropMul*=.75},
   {id:"elites",nm:"Sangue Nobre",ds:"O dobro de elites",mult:.40,f:g=>g.eliteMul=2},
+  {id:"turbo",nm:"Modo Turbo",ds:"O tempo passa 25% mais rápido",mult:.30,f:g=>g.timeScale=1.25},
+  {id:"caos",nm:"Modo Caos",ds:"Todos os tipos de inimigos desde o início",mult:.35,f:g=>g.chaos=1},
+  {id:"boss2",nm:"Eco Sombrio",ds:"Bosses surgem em dobro",mult:.45,f:g=>g.doubleBoss=1},
 ];
+/* ================= DADOS — SANTUÁRIOS ================= */
+const SHRINE_COL={vida:"#7be88a",furia:"#ff6b6b",fortuna:"#5dd97a",tempo:"#8ab4ff",maldicao:"#c06aff"};
+const SHRINE_IC={vida:"❤",furia:"🔥",fortuna:"🍀",tempo:"⏳",maldicao:"💀"};
 /* ================= DADOS — LOJA ================= */
 const SHOP=[
   {id:"vida",nm:"Vitalidade",ic:"❤",ds:"+10 de vida inicial por nível",max:5,cost:l=>120*(l+1)},
@@ -515,16 +588,23 @@ const SHOP=[
 const ACHS=[
   {id:"s5",nm:"Aquecimento",ic:"⏱",ds:"Sobreviva 5 minutos",rw:100,ck:(m,r)=>r&&r.time>=300},
   {id:"s10",nm:"Resistente",ic:"⏱",ds:"Sobreviva 10 minutos",rw:250,ck:(m,r)=>r&&r.time>=600},
-  {id:"s20",nm:"Imortal",ic:"👑",ds:"Vença uma partida (20 min)",rw:600,ck:(m,r)=>r&&r.win},
+  {id:"s20",nm:"Veterano do Eclipse",ic:"🌒",ds:"Sobreviva 20 minutos",rw:400,ck:(m,r)=>r&&r.time>=1200},
+  {id:"s30",nm:"Imortal",ic:"👑",ds:"Vença uma partida (30 min)",rw:800,ck:(m,r)=>r&&r.win},
   {id:"k1000",nm:"Ceifador",ic:"💀",ds:"Derrote 1.000 inimigos em uma partida",rw:300,ck:(m,r)=>r&&r.kills>=1000},
   {id:"k10000",nm:"Exterminador",ic:"☠",ds:"Derrote 10.000 inimigos no total",rw:500,ck:m=>m.stats.kills>=10000},
   {id:"evo1",nm:"Alquimista",ic:"✨",ds:"Evolua uma arma pela primeira vez",rw:200,ck:m=>m.stats.evolutions>=1},
   {id:"evo3",nm:"Arsenal Supremo",ic:"🌟",ds:"Evolua 3 armas em uma partida",rw:500,ck:(m,r)=>r&&r.evos>=3},
+  {id:"evo5",nm:"Colecionador de Milagres",ic:"💫",ds:"Evolua 5 armas em uma partida",rw:900,ck:(m,r)=>r&&r.evos>=5},
   {id:"boss",nm:"Caçador de Gigantes",ic:"🗿",ds:"Derrote um boss",rw:200,ck:m=>m.stats.bossKills>=1},
-  {id:"final",nm:"Devorador Devorado",ic:"🌌",ds:"Derrote o Devorador de Estrelas",rw:1000,ck:(m,r)=>r&&r.win},
+  {id:"boss30",nm:"Execução Sumária",ic:"⚡",ds:"Mate um boss em menos de 30 segundos",rw:400,ck:(m,r)=>r&&r.fastBoss},
+  {id:"final",nm:"Devorador Devorado",ic:"🌌",ds:"Derrote o Devorador de Estrelas",rw:1000,ck:(m,r)=>r&&r.finalKill},
   {id:"c10000",nm:"Tesoureiro",ic:"🪙",ds:"Colete 10.000 moedas no total",rw:400,ck:m=>m.stats.coins>=10000},
   {id:"lvl50",nm:"Ascensão",ic:"⬆",ds:"Alcance o nível 50",rw:300,ck:(m,r)=>r&&r.level>=50},
+  {id:"fio",nm:"Por um Fio",ic:"🫀",ds:"Sobreviva a um golpe com 1 de vida",rw:300,ck:(m,r)=>r&&r.lowHP},
+  {id:"altar",nm:"Devoto",ic:"🕯",ds:"Use 3 santuários em uma partida",rw:250,ck:(m,r)=>r&&r.shrines>=3},
+  {id:"merc",nm:"Bom Freguês",ic:"🧙",ds:"Compre algo do comerciante errante",rw:200,ck:(m,r)=>r&&r.bought},
   {id:"chars",nm:"Recrutador",ic:"👥",ds:"Desbloqueie todos os personagens",rw:500,ck:m=>Object.keys(CHARS).every(c=>m.chars[c])},
+  {id:"mapas",nm:"Cartógrafo",ic:"🗺",ds:"Desbloqueie todos os mapas",rw:600,ck:m=>Object.keys(MAPS).every(c=>m.maps[c])},
 ];
 
 /* ================= ESTADO DA PARTIDA ================= */
@@ -532,14 +612,16 @@ const Game={
   state:"menu", selChar:"arlen", selMap:"floresta", selMods:[],
   // entidades
   p:null, enemies:[], bullets:[], ebullets:[], gems:[], pickups:[], zones:[],
-  summons:[], parts:[], dnums:[], beams:[],
+  summons:[], parts:[], dnums:[], beams:[], shrines:[], merchant:null,
   time:0, kills:0, coins:0, level:1, xp:0, xpNext:10,
   weapons:[], passives:[], banished:new Set(), rerolls:0, banishes:0, revives:0,
-  cam:{x:0,y:0}, shake:0, spawnT:0, eliteT:0, eventT:0, banner:null,
+  cam:{x:0,y:0}, shake:0, spawnT:0, eliteT:0, eventT:0, shrineT:0, merchT:0, banner:null,
   boss:null, bossSched:[], dmgByW:{}, evos:0, hudT:0, frozen:0,
   eHpMul:1,eSpdMul:1,xpDropMul:1,eliteMul:1,halfHP:0,noCure:0,modMult:1,
+  timeScale:1, chaos:0, doubleBoss:0, desp:0, gravT:0, gravA:0, gravPull:null,
+  buffT:{furia:0,fortuna:0,tempo:0}, dmgTaken:0, lowHP:0, usedShrines:0, bought:0, fastBoss:0, finalKill:0,
   infinite:false, won:false, runStart:0, tutT:0,
-  DURATION:1200,
+  DURATION:1800,
 
   start(){
     Aud.init();
@@ -547,10 +629,14 @@ const Game={
     // limpar
     this.enemies=[];this.bullets=[];this.ebullets=[];this.gems=[];this.pickups=[];this.zones=[];
     this.summons=[];this.parts=[];this.dnums=[];this.beams=[];this.banished=new Set();
+    this.shrines=[];this.merchant=null;
     this.time=0;this.kills=0;this.coins=0;this.level=1;this.xp=0;this.xpNext=10;
     this.weapons=[];this.passives=[];this.dmgByW={};this.evos=0;this.boss=null;this.banner=null;
-    this.spawnT=0;this.eliteT=20;this.eventT=45;this.frozen=0;this.shake=0;
+    this.spawnT=0;this.eliteT=20;this.eventT=45;this.shrineT=80;this.merchT=240;this.frozen=0;this.shake=0;
     this.eHpMul=1;this.eSpdMul=1;this.xpDropMul=1;this.eliteMul=1;this.halfHP=0;this.noCure=0;
+    this.timeScale=1;this.chaos=0;this.doubleBoss=0;this.desp=0;this.gravT=0;this.gravPull=null;
+    this.buffT={furia:0,fortuna:0,tempo:0};this.dmgTaken=0;this.lowHP=0;
+    this.usedShrines=0;this.bought=0;this.fastBoss=0;this.finalKill=0;this.eclipseT=0;
     this.infinite=false;this.won=false;this.tutT=14;this.runStart=Date.now();
     this.modMult=1;
     for(const id of this.selMods){const m=MODS.find(x=>x.id===id);m.f(this);this.modMult+=m.mult}
@@ -561,14 +647,14 @@ const Game={
     this.addWeapon(c.weapon);
     this.recalc();
     this.p.hp=this.p.maxhp*(this.halfHP?.5:1);
-    // bosses agendados (minuto: chave)
-    this.bossSched=[[300,"guardiao"],[600,"bruxa"],[900,"colosso"],[1140,"devorador"]];
+    // bosses agendados: mini-bosses 5/10 min, intermediário 15, arauto 25, final 29
+    this.bossSched=[[300,"guardiao"],[600,"bruxa"],[900,"colosso"],[1500,"arauto"],[1740,"devorador"]];
     this.state="play";
     UI.show(null);$("hud").classList.add("on");
-    Aud.startMusic("calm");
+    Aud.startMusic(MAPS[this.selMap].mus||"calm");
     meta.stats.games++;save();
     this.last=performance.now();
-    if(!this._loop){this._loop=true;requestAnimationFrame(t=>this.loop(t))}
+    this.boot();
   },
 
   /* ---------- stats derivados ---------- */
@@ -584,6 +670,10 @@ const Game={
       burnDmg:1, slowPow:1, kb:1
     };
     for(const ps of this.passives)PASSIVES[ps.id].ap(s,ps.lvl);
+    // bênçãos temporárias (santuários / comerciante)
+    if(this.buffT.furia>0)s.dmg*=1.8;
+    if(this.buffT.fortuna>0)s.luck+=40;
+    if(this.buffT.tempo>0)s.cdr=Math.min(.6,s.cdr+.25);
     s.maxhp=Math.round(s.hp*s.hpmul);
     const oldMax=this.p.maxhp;
     this.p.maxhp=s.maxhp;
@@ -598,18 +688,46 @@ const Game={
   addPassive(id){this.passives.push({id,lvl:1});this.recalc()},
 
   /* ---------- LOOP ---------- */
-  last:0,_loop:false,
+  last:0,_loop:false,menuT:0,
+  boot(){if(this._loop)return;this._loop=true;this.last=performance.now();
+    requestAnimationFrame(t=>this.loop(t))},
   loop(t){
     requestAnimationFrame(tt=>this.loop(tt));
     let dt=(t-this.last)/1000;this.last=t;
     if(dt>0.1)dt=0.1;
     if(this.state==="play"){this.update(dt)}
-    if(this.state==="play"||this.state==="pause"||this.state==="level"||this.state==="chest"||this.state==="end")this.draw();
+    if(this.state==="play"||this.state==="pause"||this.state==="level"||this.state==="chest"
+      ||this.state==="end"||this.state==="merch")this.draw();
+    else{this.menuT+=dt;this.drawMenuBg()}
+  },
+  /* fundo animado das telas de menu: céu estrelado + eclipse com corona */
+  drawMenuBg(){
+    const t=this.menuT;
+    ctx.fillStyle="#0d0a14";ctx.fillRect(0,0,W,H);
+    for(const s of MENU_STARS){
+      const tw=.35+.65*Math.abs(Math.sin(t*s.sp+s.ph));
+      ctx.globalAlpha=tw*.8;ctx.fillStyle="#cfd8ff";
+      ctx.fillRect(s.x*W,s.y*H,s.s,s.s)}
+    ctx.globalAlpha=1;
+    const ex=W*.78,ey=H*.26,r=Math.min(W,H)*.13;
+    glow(ex,ey,r*3.4,GLOW.purple,.5);
+    glow(ex,ey,r*2.2,GLOW.orange,.35+.1*Math.sin(t*.8));
+    ctx.save();ctx.globalCompositeOperation="lighter";
+    const cor=ctx.createRadialGradient(ex,ey,r*.92,ex,ey,r*1.5);
+    cor.addColorStop(0,"rgba(255,190,90,.9)");cor.addColorStop(.35,"rgba(255,130,60,.32)");
+    cor.addColorStop(1,"rgba(160,60,255,0)");
+    ctx.fillStyle=cor;ctx.beginPath();ctx.arc(ex,ey,r*1.6,0,TAU);ctx.fill();ctx.restore();
+    ctx.fillStyle="#070410";ctx.beginPath();ctx.arc(ex,ey,r,0,TAU);ctx.fill();
   },
 
   update(dt){
     const p=this.p,s=this.st;
+    dt*=this.timeScale; // Modo Turbo
     this.time+=dt;meta.stats.playTime+=dt;
+    // buffs temporários expiram
+    let buffEnd=false;
+    for(const k in this.buffT)if(this.buffT[k]>0){this.buffT[k]-=dt;if(this.buffT[k]<=0)buffEnd=true}
+    if(buffEnd)this.recalc();
     // tutorial
     if(this.tutT>0){this.tutT-=dt;const tu=$("tut");
       const msgs=["Mova-se para sobreviver — os ataques são automáticos.","Colete cristais ✦ para subir de nível.","Combine armas e passivas para evoluir!"];
@@ -617,8 +735,17 @@ const Game={
       if(this.tutT<=0)tu.style.display="none";}
     // movimento
     const ax=Input.axis();
-    if(ax.x||ax.y){p.faceX=ax.x;p.faceY=ax.y;p.walkT+=dt*8}
+    if(ax.x||ax.y){p.faceX=ax.x;p.faceY=ax.y;p.walkT+=dt*8;
+      if(Math.random()<dt*14)this.parts.push({x:p.x+rnd(-5,5),y:p.y+10,vx:-ax.x*30,vy:-ax.y*30-10,
+        t:rnd(.2,.4),col:CHARS[p.char].col+"55",r:3});}
     p.x+=ax.x*s.spd*s.spdmul*dt; p.y+=ax.y*s.spd*s.spdmul*dt;
+    // gravidade instável (Abismo Astral) e atração do Arauto
+    if(this.gravT>0){this.gravT-=dt;
+      p.x+=Math.cos(this.gravA)*90*dt;p.y+=Math.sin(this.gravA)*90*dt}
+    if(this.gravPull){const g=this.gravPull;g.t-=dt;
+      if(g.t<=0)this.gravPull=null;
+      else{const dx=g.x-p.x,dy=g.y-p.y,l=Math.hypot(dx,dy)||1;
+        if(l>80){p.x+=dx/l*150*dt;p.y+=dy/l*150*dt}}}
     // regen
     if(s.regen>0){p.regenAcc+=s.regen*dt;if(p.regenAcc>=1){const h=Math.floor(p.regenAcc);p.regenAcc-=h;this.heal(h,true)}}
     if(p.hurtT>0)p.hurtT-=dt;
@@ -631,6 +758,7 @@ const Game={
     this.updateEnemies(dt);
     this.updateEBullets(dt);
     this.updateDrops(dt);
+    this.updateShrines(dt);
     this.updateFx(dt);
     // spawner / cronograma
     this.spawner(dt);
@@ -665,7 +793,7 @@ const Game={
         for(const e of this.enemies){if(Math.abs(e.x-ox)>e.r+rr||Math.abs(e.y-oy)>e.r+rr)continue;
           if(dist2(e,{x:ox,y:oy})<(e.r+rr)**2){
             if(!e.hitT)e.hitT={};
-            if((e.hitT[w.uid]||0)<=0){e.hitT[w.uid]=ws.ev&&w.id==="orbe"?.5:.5;
+            if((e.hitT[w.uid]||0)<=this.time){e.hitT[w.uid]=this.time+.5;
               this.hitEnemy(e,ws.dmg,w.id,{burn:b.burn,kb:30});
               if(ws.ev&&w.id==="orbe")this.explode(ox,oy,50*ws.area,ws.dmg*.6,w.id);
             }}}}
@@ -804,7 +932,7 @@ const Game={
     if(o.burn){e.burnT=2*s.dur;e.burnD=d*.25*s.burnDmg}
     if(o.slow){e.slowT=Math.max(e.slowT||0,1.4*s.dur);e.slowF=Math.min(.9,o.slow)}
     if(e.reflect&&Math.random()<.25)this.damagePlayer(3);
-    if(meta.settings.dmgNums)this.dnums.push({x:e.x+rnd(-8,8),y:e.y-e.r,t:.7,
+    if(meta.settings.dmgNums&&this.dnums.length<90)this.dnums.push({x:e.x+rnd(-8,8),y:e.y-e.r,t:.7,
       v:Math.round(d),crit,col:crit?"#ffd24d":(o.burn?"#ff8a5a":o.slow?"#aef0ff":wid==="raio"?"#e8e25a":"#fff")});
     if(e.hp<=0)this.killEnemy(e);
   },
@@ -822,11 +950,13 @@ const Game={
     // drops
     const xv=Math.round(e.xp*this.xpDropMul*10)/10;
     this.dropGem(e.x,e.y,xv);
+    if(ETYPES[e.type])meta.disc.en[e.type]=1; // bestiário
     if(Math.random()<.05)this.pickups.push({x:e.x,y:e.y,kind:"coin",v:rndi(1,3)});
     if(!this.noCure&&Math.random()<.008)this.pickups.push({x:e.x,y:e.y,kind:"food"});
     if(Math.random()<.002)this.pickups.push({x:e.x,y:e.y,kind:"bomb"});
     if(Math.random()<.002)this.pickups.push({x:e.x,y:e.y,kind:"magnet"});
-    if(e.elite){this.pickups.push({x:e.x,y:e.y,kind:"chest"});
+    if(Math.random()<.0015)this.pickups.push({x:e.x,y:e.y,kind:"clock"});
+    if(e.elite){this.pickups.push({x:e.x,y:e.y,kind:Math.random()<.15?"chestC":"chest"});
       this.pickups.push({x:e.x+20,y:e.y,kind:"coin",v:rndi(8,16)})}
     if(e.boss)this.bossDied(e);
   },
@@ -841,6 +971,8 @@ const Game={
     if(p.hurtT>0)return;
     const d=Math.max(1,raw-s.armor);
     p.hp-=d;p.hurtT=.5;this.shakeIt(4);Aud.sfx("hurt");
+    this.dmgTaken+=d;
+    if(p.hp>0&&p.hp<=1.5)this.lowHP=1;
     if(meta.settings.dmgNums)this.dnums.push({x:p.x,y:p.y-20,t:.8,v:Math.round(d),col:"#ff5566"});
     if(p.hp<=0){
       if(this.revives>0){this.revives--;p.hp=p.maxhp*.5;p.hurtT=2;
@@ -857,7 +989,7 @@ const Game={
     const b=ETYPES[type],t=this.time,m=tmul||1;
     const hpScale=(1+t/60*.20+(this.infinite?Math.pow((t-this.DURATION)/120,1.4)*.5:0))*this.eHpMul*MAPS[this.selMap].mult*m;
     return{type,x:0,y:0,r:b.r,hp:b.hp*hpScale,maxhp:b.hp*hpScale,
-      spd:b.spd*(1+t/600*.25)*this.eSpdMul,dmg:b.dmg*(1+t/300*.3),xp:b.xp,col:b.col,
+      spd:b.spd*(1+Math.min(.6,t/600*.25))*this.eSpdMul,dmg:b.dmg*(1+t/300*.3),xp:b.xp,col:b.col,
       shape:b.shape,flash:0,kx:0,ky:0,phase:Math.random()*TAU,
       ranged:b.ranged,summoner:b.summoner,explode:b.explode,fly:b.fly,shield:b.shield,poison:b.poison,
       atkT:rnd(1,3),sumT:rnd(3,5)};
@@ -865,6 +997,7 @@ const Game={
   spawnAt(e){const a=rnd(0,TAU),d=Math.max(W,H)*.62+rnd(0,80);
     e.x=this.p.x+Math.cos(a)*d;e.y=this.p.y+Math.sin(a)*d;this.enemies.push(e)},
   spawnTable(){ // tipos disponíveis por tempo
+    if(this.chaos)return Object.keys(ETYPES);
     const t=this.time,T=[];
     T.push("basico");
     if(t>100)T.push("rapido","basico");
@@ -874,6 +1007,8 @@ const Game={
     if(t>600)T.push("escudo","venenoso");
     if(t>720)T.push("invocador");
     if(t>900)T.push("tanque","explosivo","atirador");
+    if(t>1100)T.push("invocador","escudo","rapido");
+    if(t>1350)T.push("tanque","venenoso","explosivo","atirador");
     return T;
   },
   spawner(dt){
@@ -901,6 +1036,26 @@ const Game={
     // eventos aleatórios do mapa
     this.eventT-=dt;
     if(this.eventT<=0){this.eventT=rnd(60,100);this.randomEvent()}
+    // onda desesperadora aos 28:00
+    if(!this.desp&&!this.infinite&&t>=this.DURATION-120){this.desp=1;
+      this.toast("☠ ONDA DESESPERADORA — AGUENTE FIRME!");this.shakeIt(8);Aud.sfx("boss");
+      for(let i=0;i<50;i++)this.spawnAt(this.makeEnemy(pick(this.spawnTable())));
+      for(let i=0;i<3;i++){const e=this.makeEnemy(pick(this.spawnTable()),8);
+        e.elite=1;e.r*=1.45;e.xp*=8;const mod=pick(ELITE_MODS);mod.f(e);this.spawnAt(e)}}
+    // santuários (máx. 2 ativos)
+    this.shrineT-=dt;
+    if(this.shrineT<=0){this.shrineT=rnd(70,110);
+      if(this.shrines.length<2){const a=rnd(0,TAU),d=rnd(280,460),
+        types=["vida","furia","fortuna","tempo","maldicao"];
+        this.shrines.push({x:this.p.x+Math.cos(a)*d,y:this.p.y+Math.sin(a)*d,
+          type:pick(types),t:30});
+        this.toast("🕯 Um santuário surgiu por perto...")}}
+    // comerciante errante
+    this.merchT-=dt;
+    if(this.merchT<=0){this.merchT=rnd(240,330);
+      if(!this.merchant){const a=rnd(0,TAU),d=rnd(260,400);
+        this.merchant={x:this.p.x+Math.cos(a)*d,y:this.p.y+Math.sin(a)*d,t:30};
+        this.toast("🧙 Um comerciante errante apareceu!");Aud.sfx("pick")}}
   },
   randomEvent(){
     const r=Math.random(),p=this.p;
@@ -912,7 +1067,7 @@ const Game={
       for(let i=0;i<16;i++){const e=this.makeEnemy("basico");
         const a=i/16*TAU;e.x=p.x+Math.cos(a)*Math.max(W,H)*.55;e.y=p.y+Math.sin(a)*Math.max(W,H)*.55;
         this.enemies.push(e)}}
-    else if(r<.7){ // evento do mapa
+    else if(r<.65){ // evento do mapa
       const ev=MAPS[this.selMap].ev;
       if(ev==="raizes"){this.toast("🌿 Raízes vivas emergem!");
         for(let i=0;i<5;i++)this.zones.push({x:p.x+rnd(-260,260),y:p.y+rnd(-260,260),r:46,dmg:0,
@@ -920,12 +1075,29 @@ const Game={
       else if(ev==="maos"){this.toast("🖐 Mãos saem do chão!");
         for(let i=0;i<6;i++)this.zones.push({x:p.x+rnd(-220,220),y:p.y+rnd(-220,220),r:40,dmg:0,
           t:4,tick:9,acc:0,wid:"ev",col:"#6a5a7a",hostile:6,slowP:1});}
+      else if(ev==="torres"){this.toast("🗼 As torres antigas despertam!");
+        for(let i=0;i<5;i++)this.zones.push({x:p.x+rnd(-240,240),y:p.y+rnd(-240,240),r:70,warn:1,
+          t:1.2,tick:9,acc:0,wid:"ev",col:"#8ab4ff",det:{dmg:18,r:80}});}
+      else if(ev==="paginas"){this.toast("📜 Páginas amaldiçoadas caem do céu!");
+        for(let i=0;i<12;i++){const px2=p.x+rnd(-340,340);
+          this.ebullets.push({x:px2,y:p.y-H*.6-rnd(0,200),vx:rnd(-30,30),vy:rnd(160,240),r:6,dmg:9,life:6});}}
+      else if(ev==="gravidade"){this.toast("🌀 A gravidade enlouquece!");
+        this.gravT=5;this.gravA=rnd(0,TAU);Aud.sfx("freeze");}
       else{this.toast("🌪 Tempestade de vidro!");
         for(let i=0;i<10;i++){const a=rnd(0,TAU);
           this.ebullets.push({x:p.x+Math.cos(a)*500,y:p.y+Math.sin(a)*500,
             vx:-Math.cos(a)*240,vy:-Math.sin(a)*240,r:5,dmg:10,life:4});}}}
-    else if(r<.85){this.toast("🎁 Onda de tesouros!");
+    else if(r<.78){this.toast("🎁 Onda de tesouros!");
       for(let i=0;i<6;i++)this.pickups.push({x:p.x+rnd(-260,260),y:p.y+rnd(-260,260),kind:"coin",v:rndi(3,8)});}
+    else if(r<.88){this.toast("🌀 Um portal vomita elites!");
+      const a=rnd(0,TAU),px2=p.x+Math.cos(a)*Math.max(W,H)*.5,py2=p.y+Math.sin(a)*Math.max(W,H)*.5;
+      this.ring(px2,py2,90,"#b06be8");
+      for(let i=0;i<2;i++){const e=this.makeEnemy(pick(this.spawnTable()),6);
+        e.elite=1;e.r*=1.4;e.xp*=7;const mod=pick(ELITE_MODS);mod.f(e);e.modNm=mod.nm;
+        e.x=px2+rnd(-40,40);e.y=py2+rnd(-40,40);this.enemies.push(e)}}
+    else if(r<.94){this.toast("✚ Uma área segura se formou!");
+      this.zones.push({x:p.x+rnd(-120,120),y:p.y+rnd(-120,120),r:90,dmg:0,
+        t:8,tick:9,acc:0,wid:"ev",col:"#7be88a",healZone:4});}
     else{this.toast("🌑 Eclipse temporário: inimigos fortes, XP em dobro!");
       this.eclipseT=15;}
   },
@@ -934,22 +1106,28 @@ const Game={
       hpScale=(1+t/900)*this.eHpMul*(this.infinite?1+(t-this.DURATION)/300:1);
     const e={type:id,boss:1,x:0,y:0,r:B.r,hp:B.hp*hpScale,maxhp:B.hp*hpScale,
       spd:B.spd*this.eSpdMul,dmg:B.dmg,xp:50,col:B.col,shape:"boss",flash:0,kx:0,ky:0,
-      pattern:B.pattern,pT:2,phase:0,nm:B.nm,final:B.final};
+      pattern:B.pattern,pT:2,phase:0,nm:B.nm,final:B.final,bornT:t};
     this.spawnAt(e);this.boss=e;
+    meta.disc.b[id]=1;
+    if(this.doubleBoss){ // Eco Sombrio: cópia espectral mais fraca
+      const s2={...e,hp:e.maxhp*.6,maxhp:e.maxhp*.6,r:e.r*.85,col:"#5a4a7a",echo:1};
+      this.spawnAt(s2)}
     $("bossBar").style.display="block";$("bossNm").textContent="☠ "+B.nm;
     this.toast("☠ "+B.nm.toUpperCase()+" CHEGOU!");
     Aud.sfx("boss");Aud.startMusic("boss");this.shakeIt(10);
   },
   bossDied(e){
     meta.stats.bossKills++;
+    if(this.time-(e.bornT||0)<30)this.fastBoss=1;
+    if(e.echo){this.toast("☠ Eco sombrio dissipado!");return} // cópia não conta como o boss real
     this.boss=null;$("bossBar").style.display="none";
-    Aud.startMusic("calm");Aud.sfx("chest");
+    Aud.startMusic(MAPS[this.selMap].mus||"calm");Aud.sfx("chest");
     this.pickups.push({x:e.x,y:e.y,kind:e.final?"chestL":"chestR"});
     for(let i=0;i<10;i++)this.pickups.push({x:e.x+rnd(-60,60),y:e.y+rnd(-60,60),kind:"coin",v:rndi(5,12)});
     // auto-coleta de XP distante após boss
     for(const g of this.gems)g.pull=1;
     this.toast("☠ "+(e.nm||"Boss")+" derrotado!");
-    if(e.final&&!this.infinite){this.won=true;this.end(true)}
+    if(e.final){this.finalKill=1;if(!this.infinite){this.won=true;this.end(true)}}
   },
   updateEnemies(dt){
     const p=this.p;
@@ -968,6 +1146,8 @@ const Game={
       if(e.frenzy&&e.hp<e.maxhp*.35)spd*=1.7;
       // knockback decay
       e.x+=e.kx*dt;e.y+=e.ky*dt;e.kx*=Math.pow(.02,dt);e.ky*=Math.pow(.02,dt);
+      // gravidade instável arrasta todos
+      if(this.gravT>0){e.x+=Math.cos(this.gravA)*70*dt;e.y+=Math.sin(this.gravA)*70*dt}
       // comportamento
       const dx=p.x-e.x,dy=p.y-e.y,dl=Math.hypot(dx,dy)||1;
       if(e.boss){this.bossAI(e,dt,dx,dy,dl,spd)}
@@ -1032,6 +1212,14 @@ const Game={
         this.zones.push({x:tx,y:ty,r:80,warn:1,t:1.1,tick:9,acc:0,wid:"ev",col:"#ff8a5a",
           det:{dmg:e.dmg,r:90}});}
         break;
+      case"arauto":e.pT=2.4;e.phase=(e.phase+1)%3;
+        if(e.phase===0){for(let k=0;k<14;k++){const a=k/14*TAU+this.time*.7;
+          this.ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*150,vy:Math.sin(a)*150,r:6,dmg:e.dmg*.6,life:5})}}
+        else if(e.phase===1){this.gravPull={x:e.x,y:e.y,t:1.6};
+          this.ring(e.x,e.y,260,"#7a5aff");this.toast("⚠ O Vazio puxa você!");Aud.sfx("freeze")}
+        else for(let k=0;k<3;k++){const c=this.makeEnemy("voador");
+          c.x=e.x+rnd(-50,50);c.y=e.y+rnd(-50,50);this.enemies.push(c)}
+        break;
       case"devorador":e.pT=2.0;e.phase=(e.phase+1)%3;
         if(e.phase===0){for(let k=0;k<16;k++){const a=k/16*TAU+this.time;
           this.ebullets.push({x:e.x,y:e.y,vx:Math.cos(a)*200,vy:Math.sin(a)*200,r:7,dmg:e.dmg*.6,life:4})}}
@@ -1051,7 +1239,9 @@ const Game={
     for(let i=this.zones.length-1;i>=0;i--){const z=this.zones[i];
       if(z.warn){if(z.t<=0){this.explodeHostile(z);this.zones.splice(i,1)}continue}
       if(z.hostile){z.hAcc=(z.hAcc||0)+dt;
-        if(z.hAcc>=.6){z.hAcc=0;if(dist2(z,p)<(z.r+p.r)**2)this.damagePlayer(z.hostile)}}}
+        if(z.hAcc>=.6){z.hAcc=0;if(dist2(z,p)<(z.r+p.r)**2)this.damagePlayer(z.hostile)}}
+      if(z.healZone){z.hAcc=(z.hAcc||0)+dt;
+        if(z.hAcc>=1){z.hAcc=0;if(dist2(z,p)<(z.r+p.r)**2)this.heal(z.healZone)}}}
   },
   explodeHostile(z){
     this.ring(z.x,z.y,z.det.r,"#ff8a5a");this.shakeIt(5);Aud.sfx("boom");
@@ -1085,11 +1275,74 @@ const Game={
           if(!e.boss&&dist2(e,this.p)<420*420)this.killEnemy(e)}break}
       case"magnet":Aud.sfx("pick");this.toast("🧲 Tudo é seu!");
         for(const g of this.gems)g.pull=1;break;
+      case"clock":Aud.sfx("freeze");this.toast("⏱ O tempo congela para as hordas!");
+        this.frozen=6;this.ring(this.p.x,this.p.y,360,"#aef0ff");break;
       case"chest":this.openChest(1);break;
       case"chestR":this.openChest(3);break;
       case"chestL":this.openChest(5);break;
+      case"chestC":{ // baú amaldiçoado: 3 prêmios, mas a escuridão cobra o preço
+        this.toast("🟣 Baú amaldiçoado: poder... por um preço.");
+        this.eHpMul*=1.12;this.p.hp=Math.max(1,this.p.hp*.7);
+        this.ring(this.p.x,this.p.y,200,"#c06aff");Aud.sfx("lose");
+        this.openChest(3);break}
     }
   },
+  /* ---------- santuários & comerciante ---------- */
+  updateShrines(dt){
+    const p=this.p;
+    for(let i=this.shrines.length-1;i>=0;i--){const sh=this.shrines[i];
+      sh.t-=dt;
+      if(sh.t<=0){this.shrines.splice(i,1);continue}
+      if(dist2(sh,p)<(26+p.r)**2){this.shrines.splice(i,1);this.useShrine(sh)}}
+    if(this.merchant){const m=this.merchant;
+      m.t-=dt;
+      if(m.t<=0){this.merchant=null;this.toast("🧙 O comerciante seguiu viagem...")}
+      else if(dist2(m,p)<(26+p.r)**2)this.openMerch()}
+  },
+  useShrine(sh){
+    this.usedShrines++;Aud.sfx("chest");
+    this.ring(sh.x,sh.y,140,SHRINE_COL[sh.type]);
+    for(let i=0;i<14;i++)this.parts.push({x:sh.x,y:sh.y,vx:rnd(-140,140),vy:rnd(-180,-40),
+      t:rnd(.4,.8),col:SHRINE_COL[sh.type],r:rnd(2,4)});
+    switch(sh.type){
+      case"vida":this.heal(Math.round(this.p.maxhp*.5));this.toast("🕯 Santuário da Vida: cura abundante!");break;
+      case"furia":this.buffT.furia=15;this.recalc();this.toast("🕯 Santuário da Fúria: +80% de dano por 15s!");break;
+      case"fortuna":this.buffT.fortuna=30;this.recalc();this.toast("🕯 Santuário da Fortuna: +40 de sorte por 30s!");break;
+      case"tempo":this.buffT.tempo=20;this.recalc();this.toast("🕯 Santuário do Tempo: -25% de cooldown por 20s!");break;
+      case"maldicao":this.eHpMul*=1.15;this.xpDropMul*=1.5;
+        this.coins+=rndi(30,60);
+        this.toast("🕯 Santuário da Maldição: inimigos mais fortes... e MUITO mais XP!");break;
+    }
+  },
+  openMerch(){
+    if(this.state!=="play")return;
+    this.state="merch";Aud.sfx("pick");
+    this.renderMerch();
+    $("ovMerch").classList.add("on");
+  },
+  renderMerch(){
+    $("merchCoins").textContent="🪙 Suas moedas: "+this.coins;
+    const list=$("merchList");list.innerHTML="";
+    const items=[
+      {ic:"🍖",nm:"Banquete Completo",ds:"Recupera toda a vida",cost:45,f:()=>this.heal(9999)},
+      {ic:"🎁",nm:"Baú Misterioso",ds:"Abre um baú na hora",cost:70,f:()=>{this.closeMerch();this.openChest(1)}},
+      {ic:"🎲",nm:"Dado Viciado",ds:"+1 reroll nesta partida",cost:30,f:()=>this.rerolls++},
+      {ic:"🚫",nm:"Selo de Banimento",ds:"+1 banimento nesta partida",cost:30,f:()=>this.banishes++},
+      {ic:"⚔",nm:"Bênção de Guerra",ds:"+80% de dano por 60s",cost:55,f:()=>{this.buffT.furia=60;this.recalc()}},
+    ];
+    for(const it of items){const d=document.createElement("div");d.className="merchItem";
+      d.innerHTML=`<div style="font-size:24px">${it.ic}</div>
+        <div class="info"><div class="nm">${it.nm}</div><div class="ds">${it.ds}</div></div>
+        <button class="btn small" ${this.coins<it.cost?"disabled":""}>${it.cost} 🪙</button>`;
+      const btn=d.querySelector("button");
+      if(this.coins>=it.cost)btn.onclick=()=>{this.coins-=it.cost;this.bought=1;Aud.sfx("coin");
+        it.f();if(this.state==="merch")this.renderMerch()};
+      list.appendChild(d)}
+  },
+  closeMerch(){$("ovMerch").classList.remove("on");
+    if(this.merchant)this.merchant.t=Math.min(this.merchant.t,0); // ele parte após o negócio
+    this.state="play";this.last=performance.now()},
+
   gainXP(v){
     this.xp+=v;
     while(this.xp>=this.xpNext){this.xp-=this.xpNext;this.level++;
@@ -1167,7 +1420,8 @@ const Game={
   abandon(){$("ovPause").classList.remove("on");this.end(false)},
   goInfinite(){this.infinite=true;meta.infinite=1;$("ovEnd").classList.remove("on");
     this.state="play";this.last=performance.now();
-    this.bossSched=[[this.time+180,"bruxa"],[this.time+420,"colosso"],[this.time+660,"devorador"]];
+    this.bossSched=[[this.time+180,"bruxa"],[this.time+400,"colosso"],
+      [this.time+620,"arauto"],[this.time+840,"devorador"]];
     this.toast("∞ MODO INFINITO — sobreviva o máximo possível!")},
 
   end(win){
@@ -1177,7 +1431,10 @@ const Game={
     const coinsWon=Math.round(this.coins*this.modMult)+(win?200:0);
     meta.coins+=coinsWon;meta.stats.coins+=coinsWon;
     meta.stats.bestTime=Math.max(meta.stats.bestTime,Math.floor(this.time));
-    const run={time:this.time,kills:this.kills,win,level:this.level,evos:this.evos};
+    if(win)meta.stats.wins++;
+    const run={time:this.time,kills:this.kills,win,level:this.level,evos:this.evos,
+      finalKill:this.finalKill,fastBoss:this.fastBoss,lowHP:this.lowHP,
+      shrines:this.usedShrines,bought:this.bought};
     // conquistas
     const newAch=[];
     for(const a of ACHS)if(!meta.ach[a.id]&&a.ck(meta,run)){meta.ach[a.id]=1;meta.coins+=a.rw;newAch.push(a)}
@@ -1190,11 +1447,14 @@ const Game={
     $("endTitle").textContent=win?"🌟 VITÓRIA!":"💀 Você caiu...";
     $("endTitle").style.color=win?"var(--gold)":"var(--hp)";
     $("endSub").textContent=win?"Você sobreviveu ao eclipse e derrotou o Devorador.":"As hordas venceram desta vez. Fique mais forte na loja!";
-    const tbl=$("endStats");
+    const tbl=$("endStats"),
+      dmgTotal=Math.round(Object.values(this.dmgByW).reduce((a,b)=>a+b,0));
     tbl.innerHTML=`<span>Tempo</span><b>${fmtT(this.time)}</b>
       <span>Nível</span><b>${this.level}</b>
       <span>Abates</span><b>${this.kills}</b>
       <span>Evoluções</span><b>${this.evos}</b>
+      <span>Dano causado</span><b>${dmgTotal}</b>
+      <span>Dano recebido</span><b>${Math.round(this.dmgTaken)}</b>
       <span>Moedas ganhas</span><b>+${coinsWon} 🪙${this.modMult>1?" (x"+this.modMult.toFixed(2)+")":""}</b>`;
     const wl=$("endWeaps");wl.innerHTML="";
     const sorted=[...this.weapons].sort((a,b)=>(this.dmgByW[b.id]||0)-(this.dmgByW[a.id]||0));
@@ -1220,6 +1480,14 @@ const Game={
     sl+="<br>";for(const ps of this.passives)sl+=PASSIVES[ps.id].ic;
     $("slots").innerHTML=sl;
     if(this.boss)$("bossFill").style.width=Math.max(0,this.boss.hp/this.boss.maxhp*100)+"%";
+    // indicadores de efeitos ativos
+    let bf="";
+    if(this.frozen>0)bf+=`<span style="color:#aef0ff">⏱ ${Math.ceil(this.frozen)}s</span>`;
+    if(this.buffT.furia>0)bf+=`<span style="color:#ff6b6b">🔥 fúria ${Math.ceil(this.buffT.furia)}s</span>`;
+    if(this.buffT.fortuna>0)bf+=`<span style="color:#5dd97a">🍀 sorte ${Math.ceil(this.buffT.fortuna)}s</span>`;
+    if(this.buffT.tempo>0)bf+=`<span style="color:#8ab4ff">⏳ fluxo ${Math.ceil(this.buffT.tempo)}s</span>`;
+    if(this.eclipseT>0)bf+=`<span style="color:#c06aff">🌑 eclipse ${Math.ceil(this.eclipseT)}s</span>`;
+    $("buffs").innerHTML=bf;
   },
 
   /* ================= RENDER ================= */
@@ -1242,7 +1510,13 @@ const Game={
         ctx.fillStyle="#ffffff10";
         if(map.deco==="tree"){ctx.beginPath();ctx.moveTo(cx2,cy2-12);ctx.lineTo(cx2-9,cy2+8);ctx.lineTo(cx2+9,cy2+8);ctx.fill()}
         else if(map.deco==="grave"){ctx.fillRect(cx2-5,cy2-8,10,16)}
-        else{ctx.fillRect(cx2-3,cy2-10,6,20);ctx.fillRect(cx2-9,cy2-4,6,4)}}}
+        else if(map.deco==="cactus"){ctx.fillRect(cx2-3,cy2-10,6,20);ctx.fillRect(cx2-9,cy2-4,6,4)}
+        else if(map.deco==="ruin"){ctx.fillRect(cx2-10,cy2-4,8,12);ctx.fillRect(cx2,cy2-12,9,20);ctx.fillRect(cx2-13,cy2+4,26,4)}
+        else if(map.deco==="shelf"){ctx.fillRect(cx2-12,cy2-14,4,28);ctx.fillRect(cx2+8,cy2-14,4,28);
+          ctx.fillRect(cx2-12,cy2-6,24,2);ctx.fillRect(cx2-12,cy2+4,24,2)}
+        else if(map.deco==="star"){const tw=.5+.5*Math.sin(this.time*2+h);
+          ctx.globalAlpha=.25+.35*tw;ctx.fillStyle="#cfe0ff";
+          ctx.fillRect(cx2-1.5,cy2-1.5,3,3);ctx.globalAlpha=1}}}
     // zonas
     for(const z of this.zones){const zx=z.x+ox,zy=z.y+oy;
       ctx.globalAlpha=z.warn?(.25+.25*Math.sin(this.time*16)):.3;
@@ -1251,9 +1525,32 @@ const Game={
       if(!z.warn&&!z.hostile){ctx.fillStyle=z.col;
         for(let k=0;k<5;k++){const a=k/5*TAU+z.t,px2=zx+Math.cos(a)*z.r*.6,py2=zy+Math.sin(a)*z.r*.6;
           ctx.beginPath();ctx.moveTo(px2,py2-6);ctx.lineTo(px2-4,py2+4);ctx.lineTo(px2+4,py2+4);ctx.fill()}}}
+    // santuários: pilares de luz pulsantes
+    for(const sh of this.shrines){const sx2=sh.x+ox,sy2=sh.y+oy;
+      if(sx2<-60||sx2>W+60||sy2<-60||sy2>H+60)continue;
+      const col=SHRINE_COL[sh.type],pu=1+Math.sin(this.time*3)*.12,fade=Math.min(1,sh.t/4);
+      glow(sx2,sy2,46*pu,sh.type==="maldicao"?GLOW.purple:sh.type==="furia"?GLOW.red:
+        sh.type==="tempo"?GLOW.cyan:GLOW.green,.8*fade);
+      ctx.globalAlpha=fade;
+      ctx.strokeStyle=col;ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(sx2,sy2,22*pu,0,TAU);ctx.stroke();
+      ctx.fillStyle=col+"33";ctx.beginPath();ctx.arc(sx2,sy2,22*pu,0,TAU);ctx.fill();
+      ctx.font="20px serif";ctx.textAlign="center";
+      ctx.fillStyle="#fff";ctx.fillText(SHRINE_IC[sh.type],sx2,sy2+7-Math.abs(Math.sin(this.time*2.4))*4);
+      ctx.globalAlpha=1;}
+    // comerciante errante
+    if(this.merchant){const m=this.merchant,mx2=m.x+ox,my2=m.y+oy;
+      const fade=Math.min(1,m.t/3);
+      glow(mx2,my2,40,GLOW.gold,.6*fade);
+      ctx.globalAlpha=fade;ctx.font="26px serif";ctx.textAlign="center";
+      ctx.fillText("🧙",mx2,my2+8+Math.sin(this.time*3)*2);
+      ctx.font="bold 13px 'Segoe UI'";ctx.fillStyle="#ffd24d";
+      ctx.fillText("💰 "+Math.ceil(m.t)+"s",mx2,my2-24);
+      ctx.globalAlpha=1;}
     // gems
     for(const g of this.gems){const gx=g.x+ox,gy=g.y+oy;
       if(gx<-20||gx>W+20||gy<-20||gy>H+20)continue;
+      glow(gx,gy,g.big?13:8,g.big?GLOW.gold:GLOW.cyan,.55);
       ctx.fillStyle=g.big?"#ffd24d":"#7be3ff";
       ctx.save();ctx.translate(gx,gy);ctx.rotate(this.time*2);
       const s2=g.big?7:5;ctx.fillRect(-s2/2,-s2/2,s2,s2);ctx.restore();}
@@ -1262,7 +1559,7 @@ const Game={
       if(kx<-30||kx>W+30||ky<-30||ky>H+30)continue;
       const bob=Math.sin(this.time*4+k.x)*3;
       ctx.font="18px serif";ctx.textAlign="center";
-      const ic={coin:"🪙",food:"🍗",bomb:"💣",magnet:"🧲",chest:"🎁",chestR:"💎",chestL:"👑"}[k.kind];
+      const ic={coin:"🪙",food:"🍗",bomb:"💣",magnet:"🧲",clock:"⏱",chest:"🎁",chestR:"💎",chestL:"👑",chestC:"🟣"}[k.kind];
       ctx.fillText(ic,kx,ky+bob);}
     // invocações
     for(const m of this.summons){const mx=m.x+ox,my=m.y+oy;
@@ -1277,6 +1574,7 @@ const Game={
       if(b.type!=="orbit")continue;const ws=this.wStats(w),R=b.radius*ws.area+(ws.ev?25:0);
       for(let i=0;i<ws.amount;i++){const a=w.angle+i*TAU/ws.amount,
         bx=p.x+Math.cos(a)*R+ox,by=p.y+Math.sin(a)*R+oy;
+        glow(bx,by,16,w.id==="orbe"?(ws.ev?GLOW.gold:GLOW.purple):GLOW.orange,.5);
         if(w.id==="orbe"){ctx.fillStyle=ws.ev?"#ffd24d":"#c89bff";
           ctx.beginPath();ctx.arc(bx,by,b.size*ws.area,0,TAU);ctx.fill();
           ctx.fillStyle="#ffffff80";ctx.beginPath();ctx.arc(bx-3,by-3,3,0,TAU);ctx.fill();}
@@ -1285,6 +1583,7 @@ const Game={
           ctx.fillStyle="#ffe28a";ctx.fillRect(-3,-5,6,4);ctx.restore();}}}
     // projéteis do jogador
     for(const b of this.bullets){const bx=b.x+ox,by=b.y+oy;
+      glow(bx,by,b.shape==="lance"?20:11,b.shape==="lance"?GLOW.gold:b.shape==="shard"?GLOW.cyan:GLOW.white,.4);
       ctx.save();ctx.translate(bx,by);ctx.rotate(Math.atan2(b.vy,b.vx));
       ctx.fillStyle=b.col;
       if(b.shape==="lance"){ctx.fillRect(-16,-3,32,6);ctx.beginPath();ctx.moveTo(16,-6);ctx.lineTo(26,0);ctx.lineTo(16,6);ctx.fill()}
@@ -1293,7 +1592,9 @@ const Game={
       ctx.restore()}
     // projéteis inimigos
     ctx.fillStyle="#ff5a7a";
-    for(const b of this.ebullets){ctx.beginPath();ctx.arc(b.x+ox,b.y+oy,b.r,0,TAU);ctx.fill()}
+    for(const b of this.ebullets){const bx=b.x+ox,by=b.y+oy;
+      glow(bx,by,b.r*2.2,GLOW.red,.5);
+      ctx.beginPath();ctx.arc(bx,by,b.r,0,TAU);ctx.fill()}
     // beams/anéis
     for(const b of this.beams){const a=b.t/b.max;
       if(b.type==="ring"){ctx.globalAlpha=a;ctx.strokeStyle=b.col||"#fff";ctx.lineWidth=4;
@@ -1314,15 +1615,31 @@ const Game={
     ctx.globalAlpha=1;
     // jogador
     this.drawPlayer(p.x+ox,p.y+oy);
-    // números de dano
+    // números de dano (pop ao surgir, crítico maior)
     ctx.textAlign="center";
     for(const d of this.dnums){ctx.globalAlpha=Math.min(1,d.t*2);
-      ctx.font=(d.crit?"bold 20px":"bold 14px")+" 'Segoe UI'";
+      const pop=1+Math.max(0,(d.t-.55))*2.2,
+            size=Math.round((d.crit?21:14)*pop);
+      ctx.font="bold "+size+"px 'Segoe UI'";
       ctx.fillStyle="#000";ctx.fillText(d.v,d.x+ox+1,d.y+oy+1);
       ctx.fillStyle=d.col;ctx.fillText(d.v,d.x+ox,d.y+oy)}
     ctx.globalAlpha=1;
     // vinheta de eclipse
     if(this.eclipseT>0){ctx.fillStyle="rgba(40,0,70,.18)";ctx.fillRect(0,0,W,H)}
+    // onda desesperadora: pulso vermelho nas bordas
+    if(this.desp&&this.state==="play"&&!this.won){
+      const a=.06+.05*Math.sin(this.time*5);
+      ctx.fillStyle=`rgba(255,30,60,${a})`;ctx.fillRect(0,0,W,H)}
+    // vida baixa: vinheta vermelha
+    if(p.maxhp&&p.hp/p.maxhp<.3){
+      const a=(0.3-p.hp/p.maxhp)*1.4*(0.7+0.3*Math.sin(this.time*6));
+      const vg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.7);
+      vg.addColorStop(0,"rgba(255,0,40,0)");vg.addColorStop(1,`rgba(255,0,40,${Math.min(.45,a)})`);
+      ctx.fillStyle=vg;ctx.fillRect(0,0,W,H)}
+    // vinheta sutil permanente (foco no centro)
+    const vg2=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.45,W/2,H/2,Math.max(W,H)*.75);
+    vg2.addColorStop(0,"rgba(0,0,0,0)");vg2.addColorStop(1,"rgba(5,0,15,.4)");
+    ctx.fillStyle=vg2;ctx.fillRect(0,0,W,H);
   },
   drawPlayer(x,y){
     const p=this.p,c=CHARS[p.char];
@@ -1346,7 +1663,9 @@ const Game={
   drawEnemy(e,x,y){
     const flash=e.flash>0;
     ctx.fillStyle="rgba(0,0,0,.3)";ctx.beginPath();ctx.ellipse(x,y+e.r*.8,e.r*.8,e.r*.3,0,0,TAU);ctx.fill();
-    ctx.fillStyle=flash?"#fff":e.col;
+    if(e.boss)glow(x,y,e.r*2.4,e.final?GLOW.gold:GLOW.purple,.45);
+    else if(e.elite)glow(x,y,e.r*2,GLOW.gold,.35);
+    ctx.fillStyle=flash?"#fff":(this.frozen>0?"#9fd8ff":e.col);
     const r=e.r,wob=Math.sin(this.time*6+e.phase)*2;
     switch(e.shape){
       case"blob":ctx.beginPath();ctx.arc(x,y+wob*.3,r,0,TAU);ctx.fill();
@@ -1497,7 +1816,7 @@ const UI={
     for(const o of document.querySelectorAll(".overlay"))o.classList.remove("on");
     $("hud").classList.remove("on");
     if(id)$(id).classList.add("on")},
-  menu(){Game.state="menu";Aud.stopMusic();this.show("scrMenu");
+  menu(){Game.state="menu";if(Aud.ctx)Aud.startMusic("menu");this.show("scrMenu");
     $("menuCoins").textContent="🪙 "+meta.coins;
     const s=meta.stats;
     $("menuStats").innerHTML=s.games?`Partidas: ${s.games} • Abates totais: ${s.kills} • Melhor tempo: ${fmtT(s.bestTime)} • Melhor nível: ${s.bestLevel}`:"";},
@@ -1552,19 +1871,32 @@ const UI={
       list.appendChild(d)}},
   collection(){this.show("scrCol");
     const b=$("colBody");
-    let wHtml="",eHtml="";
+    let wHtml="",eHtml="",enHtml="",bHtml="",cHtml="",mHtml="";
     for(const[id,w]of Object.entries(WEAPONS)){
-      wHtml+=`<span style="margin:4px;display:inline-block;padding:6px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px">${meta.disc.w[id]?w.ic+" "+w.nm:"❔ ???"}</span>`;
-      eHtml+=`<span style="margin:4px;display:inline-block;padding:6px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px">${meta.disc.e[id]?w.evo.ic+" "+w.evo.nm:"❔ ???"}</span>`}
+      wHtml+=`<span>${meta.disc.w[id]?w.ic+" "+w.nm:"❔ ???"}</span>`;
+      eHtml+=`<span>${meta.disc.e[id]?w.evo.ic+" "+w.evo.nm:"❔ ???"}</span>`}
+    for(const[id,e]of Object.entries(ETYPES))
+      enHtml+=`<span>${meta.disc.en[id]?"👹 "+e.nm:"❔ ???"}</span>`;
+    for(const[id,bs]of Object.entries(BOSSES))
+      bHtml+=`<span>${meta.disc.b[id]?"☠ "+bs.nm+" — <i style='color:var(--dim)'>"+bs.lore+"</i>":"❔ ???"}</span>`;
+    for(const[id,c]of Object.entries(CHARS))
+      cHtml+=`<span>${meta.chars[id]?c.ic+" "+c.nm:"🔒 ???"}</span>`;
+    for(const[id,m]of Object.entries(MAPS))
+      mHtml+=`<span>${meta.maps[id]?m.ic+" "+m.nm:"🔒 ???"}</span>`;
     const s=meta.stats;
-    b.innerHTML=`<h2 style="font-size:17px">Armas descobertas</h2><div>${wHtml}</div>
-      <h2 style="font-size:17px;margin-top:14px">Evoluções descobertas</h2><div>${eHtml}</div>
-      <h2 style="font-size:17px;margin-top:14px">Estatísticas globais</h2>
+    b.innerHTML=`<h2 style="font-size:17px">Armas descobertas</h2><div class="colGrid">${wHtml}</div>
+      <h2 style="font-size:17px;margin-top:10px">Evoluções descobertas</h2><div class="colGrid">${eHtml}</div>
+      <h2 style="font-size:17px;margin-top:10px">Bestiário</h2><div class="colGrid">${enHtml}</div>
+      <h2 style="font-size:17px;margin-top:10px">Bosses enfrentados</h2><div class="colGrid">${bHtml}</div>
+      <h2 style="font-size:17px;margin-top:10px">Sobreviventes</h2><div class="colGrid">${cHtml}</div>
+      <h2 style="font-size:17px;margin-top:10px">Mapas</h2><div class="colGrid">${mHtml}</div>
+      <h2 style="font-size:17px;margin-top:10px">Estatísticas globais</h2>
       <div class="statTbl" style="display:inline-grid">
       <span>Tempo total jogado</span><b>${fmtT(s.playTime)}</b>
       <span>Inimigos derrotados</span><b>${s.kills}</b>
       <span>Moedas coletadas</span><b>${s.coins}</b>
       <span>Partidas</span><b>${s.games}</b>
+      <span>Vitórias</span><b>${s.wins}</b>
       <span>Bosses derrotados</span><b>${s.bossKills}</b>
       <span>Evoluções feitas</span><b>${s.evolutions}</b></div>`},
   settings(fromPause){this.show("scrSet");
@@ -1581,6 +1913,7 @@ const UI={
   wipeSave(){if(confirm("Apagar TODO o progresso?")){store.del();meta=defMeta();this.menu()}}
 };
 UI.menu();
+Game.boot();
 </script>
 </body>
 </html>
