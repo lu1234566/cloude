@@ -89,7 +89,7 @@ h2::after{content:" ☙";color:var(--gold2);font-size:.8em}
   font-family:var(--serif);font-weight:700;font-size:19px;letter-spacing:1px;
   text-shadow:0 2px 4px #000,0 0 16px rgba(0,0,0,.8)}
 #hudLeft{position:fixed;top:42px;left:12px;font-size:14px;text-shadow:0 2px 4px #000;line-height:1.7}
-#slots{position:fixed;top:42px;right:12px;text-align:right;font-size:18px;text-shadow:0 2px 4px #000;line-height:1.5;letter-spacing:2px}
+#slots{position:fixed;top:84px;right:14px;text-align:right;font-size:18px;text-shadow:0 2px 4px #000;line-height:1.5;letter-spacing:2px}
 #bossBar{position:fixed;top:58px;left:50%;transform:translateX(-50%);width:min(520px,80vw);display:none}
 #bossBar .nm{font-family:var(--serif);text-align:center;font-size:15px;font-weight:700;color:#f0c8a0;
   letter-spacing:3px;font-variant:small-caps;text-shadow:0 2px 4px #000,0 0 14px rgba(224,52,79,.6);margin-bottom:3px}
@@ -106,8 +106,9 @@ h2::after{content:" ☙";color:var(--gold2);font-size:.8em}
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><g transform='rotate(270 32 32)'><g fill='none' stroke='%23c9a23f' stroke-width='2' opacity='.8'><path d='M3 62 V20 Q3 3 20 3 H62'/><path d='M9 62 V24 Q9 9 24 9 H62' opacity='.45'/><path d='M20 3 Q34 3 34 13 Q34 21 26 21 Q20 21 20 15 Q20 11 25 11'/></g><circle cx='3' cy='62' r='2.5' fill='%23c9a23f'/><circle cx='62' cy='3' r='2.5' fill='%23c9a23f'/></g></svg>");
   background-repeat:no-repeat;background-size:64px 64px;
   background-position:top left,top right,bottom right,bottom left}
-#pauseBtn{position:fixed;top:14px;right:14px;pointer-events:auto;background:#0008;border:1px solid #fff4;
-  color:#fff;border-radius:8px;padding:6px 12px;font-size:18px;cursor:pointer;z-index:6}
+#pauseBtn{position:fixed;top:13px;right:80px;pointer-events:auto;background:#02050cdd;border:1px solid var(--gold2);
+  color:#e9dfc2;border-radius:6px;padding:5px 12px;font-size:18px;cursor:pointer;z-index:6}
+#pauseBtn:hover{border-color:var(--gold)}
 #tut{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#000a;border:1px solid var(--line);
   border-radius:10px;padding:8px 16px;font-size:14px;color:var(--dim);text-align:center;max-width:90vw}
 #toast{position:fixed;top:84px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#2c2310,#191205);
@@ -332,6 +333,59 @@ const GLOW={
 };
 function glow(x,y,r,spr,alpha=1){ctx.save();ctx.globalCompositeOperation="lighter";
   ctx.globalAlpha=alpha;ctx.drawImage(spr,x-r,y-r,r*2,r*2);ctx.restore()}
+/* ---------- textura de chão orgânica (pré-renderizada, repete sem emendas) ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
+  return((t^t>>>14)>>>0)/4294967296}}
+function makeGroundTile(mapId){
+  const M=MAPS[mapId],S=320,c=document.createElement("canvas");c.width=c.height=S;
+  const g=c.getContext("2d");
+  const rs=mulberry32([...mapId].reduce((a,ch)=>(a*31+ch.charCodeAt(0))|0,7));
+  g.fillStyle=M.ground;g.fillRect(0,0,S,S);
+  // desenha 9 cópias deslocadas para o padrão fechar sem emendas
+  const wrap=f=>{for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+    g.save();g.translate(dx*S,dy*S);f();g.restore()}};
+  // manchas orgânicas do tom secundário (substituem os antigos quadradões)
+  for(let i=0;i<20;i++){
+    const x=rs()*S,y=rs()*S,r0=12+rs()*26,alpha=.35+rs()*.4,
+      circ=Array.from({length:5},()=>({dx:(rs()-.5)*r0*1.4,dy:(rs()-.5)*r0*1.4,r:r0*(.5+rs()*.5)}));
+    wrap(()=>{g.globalAlpha=alpha;g.fillStyle=M.ground2;g.beginPath();
+      for(const ci of circ){g.moveTo(x+ci.dx+ci.r,y+ci.dy);g.arc(x+ci.dx,y+ci.dy,ci.r,0,TAU)}
+      g.fill();g.globalAlpha=1});}
+  // salpicos de luz e sombra
+  for(let i=0;i<300;i++){const x=rs()*S,y=rs()*S,dk=rs()<.55,sz=1+rs()*1.8;
+    g.fillStyle=dk?"rgba(0,0,0,.16)":"rgba(255,255,255,.045)";g.fillRect(x,y,sz,sz)}
+  // micro-detalhes temáticos
+  for(let i=0;i<60;i++){const x=rs()*S,y=rs()*S;
+    switch(M.deco){
+      case"tree": // tufos de grama
+        g.strokeStyle="rgba(110,170,90,.20)";g.lineWidth=1;
+        for(let b=0;b<3;b++){const bx=x+b*2.5,tipx=bx+(rs()*4-2);
+          g.beginPath();g.moveTo(bx,y);g.quadraticCurveTo(bx+1,y-4,tipx,y-7);g.stroke()}break;
+      case"grave": // lascas de osso e pedra
+        g.fillStyle="rgba(150,150,180,.10)";
+        g.save();g.translate(x,y);g.rotate(rs()*TAU);g.fillRect(-2.5,-1,5,2);g.restore();break;
+      case"cactus": // ondulações de areia
+        g.strokeStyle="rgba(255,240,200,.06)";g.lineWidth=1.5;
+        g.beginPath();g.arc(x,y,5+rs()*9,Math.PI*.05,Math.PI*.55);g.stroke();break;
+      case"ruin": // entulho espalhado
+        g.fillStyle="rgba(150,160,185,.09)";
+        g.save();g.translate(x,y);g.rotate(rs()*TAU);g.fillRect(-3,-1.5,6,3);g.restore();break;
+      case"shelf": // tábuas do assoalho
+        g.strokeStyle="rgba(0,0,0,.13)";g.lineWidth=1;
+        g.beginPath();g.moveTo(x-16,y);g.lineTo(x+16,y);g.stroke();break;
+      case"star": // poeira cósmica
+        g.fillStyle="rgba(170,200,255,"+(.05+rs()*.1).toFixed(3)+")";
+        g.beginPath();g.arc(x,y,.8+rs()*1.6,0,TAU);g.fill();break;
+    }}
+  // véus de nebulosa no Abismo Astral
+  if(M.deco==="star")for(let i=0;i<5;i++){
+    const x=rs()*S,y=rs()*S,r=40+rs()*60,
+      grad=g.createRadialGradient(x,y,0,x,y,r);
+    grad.addColorStop(0,"rgba(100,80,200,.10)");grad.addColorStop(1,"rgba(0,0,0,0)");
+    wrap(()=>{g.fillStyle=grad;g.beginPath();g.arc(x,y,r,0,TAU);g.fill()})}
+  return c;
+}
 /* estrelas e brasas do fundo do menu */
 const MENU_STARS=Array.from({length:140},()=>({x:Math.random(),y:Math.random(),
   s:Math.random()*1.8+.4,ph:Math.random()*TAU,sp:Math.random()*.6+.2}));
@@ -1605,26 +1659,20 @@ const Game={
           sy=this.shake>0?rnd(-this.shake,this.shake):0;
     const ox=W/2-this.cam.x+sx, oy=H/2-this.cam.y+sy;
     const map=MAPS[this.selMap];
-    // chão
-    ctx.fillStyle=map.ground;ctx.fillRect(0,0,W,H);
+    // chão: textura orgânica pré-renderizada, repetida e ancorada no mundo
+    if(this._groundFor!==this.selMap){this._groundFor=this.selMap;
+      this._groundPat=ctx.createPattern(makeGroundTile(this.selMap),"repeat")}
+    {const PS=320,tx=ox%PS,ty=oy%PS;
+      ctx.save();ctx.translate(tx,ty);ctx.fillStyle=this._groundPat;
+      ctx.fillRect(-PS*2,-PS*2,W+PS*4,H+PS*4);ctx.restore()}
+    // claridade quente do herói sobre o terreno
+    glow(p.x+ox,p.y+oy,170,GLOW.gold,.06);
     const GS=70;
     const x0=Math.floor((this.cam.x-W/2)/GS)-1,x1=Math.floor((this.cam.x+W/2)/GS)+1,
           y0=Math.floor((this.cam.y-H/2)/GS)-1,y1=Math.floor((this.cam.y+H/2)/GS)+1;
     for(let gx=x0;gx<=x1;gx++)for(let gy=y0;gy<=y1;gy++){
       const h=((gx*73856093)^(gy*19349663))>>>0;
-      if((h%7)===0){ctx.fillStyle=map.ground2;
-        ctx.fillRect(gx*GS+ox,gy*GS+oy,GS,GS)}
-      if((h%23)===0){const cx2=gx*GS+ox+GS/2,cy2=gy*GS+oy+GS/2;
-        ctx.fillStyle="#ffffff10";
-        if(map.deco==="tree"){ctx.beginPath();ctx.moveTo(cx2,cy2-12);ctx.lineTo(cx2-9,cy2+8);ctx.lineTo(cx2+9,cy2+8);ctx.fill()}
-        else if(map.deco==="grave"){ctx.fillRect(cx2-5,cy2-8,10,16)}
-        else if(map.deco==="cactus"){ctx.fillRect(cx2-3,cy2-10,6,20);ctx.fillRect(cx2-9,cy2-4,6,4)}
-        else if(map.deco==="ruin"){ctx.fillRect(cx2-10,cy2-4,8,12);ctx.fillRect(cx2,cy2-12,9,20);ctx.fillRect(cx2-13,cy2+4,26,4)}
-        else if(map.deco==="shelf"){ctx.fillRect(cx2-12,cy2-14,4,28);ctx.fillRect(cx2+8,cy2-14,4,28);
-          ctx.fillRect(cx2-12,cy2-6,24,2);ctx.fillRect(cx2-12,cy2+4,24,2)}
-        else if(map.deco==="star"){const tw=.5+.5*Math.sin(this.time*2+h);
-          ctx.globalAlpha=.25+.35*tw;ctx.fillStyle="#cfe0ff";
-          ctx.fillRect(cx2-1.5,cy2-1.5,3,3);ctx.globalAlpha=1}}
+      if((h%19)===0)this.drawDeco(map.deco,h,gx*GS+ox+GS/2,gy*GS+oy+GS/2);
       // runas da língua antiga gravadas no chão, pulsando de leve
       if((h%41)===0){const cx2=gx*GS+ox+GS/2,cy2=gy*GS+oy+GS/2;
         const RUNES="ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛋ";
@@ -1789,38 +1837,156 @@ const Game={
         ctx.globalAlpha=1;
       }}
   },
+  /* decorações de cenário ilustradas: sombra própria, contorno de tinta e variação de escala */
+  drawDeco(type,h,x,y){
+    const s=.8+((h>>4)%4)*.16, t=this.time, ink="rgba(5,8,16,.5)";
+    ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+    if(((h>>6)%4)===0&&type!=="star"){ // rocha (aparece em qualquer mapa)
+      ctx.fillStyle="rgba(0,0,0,.28)";ctx.beginPath();ctx.ellipse(0,7,12,4,0,0,TAU);ctx.fill();
+      ctx.fillStyle="#39414f";ctx.beginPath();
+      ctx.moveTo(-10,6);ctx.lineTo(-7,-4);ctx.lineTo(0,-8);ctx.lineTo(8,-3);ctx.lineTo(10,6);
+      ctx.closePath();ctx.fill();
+      ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.stroke();
+      ctx.fillStyle="rgba(255,255,255,.10)";ctx.beginPath();
+      ctx.moveTo(-7,-4);ctx.lineTo(0,-8);ctx.lineTo(2,-2);ctx.lineTo(-5,1);ctx.closePath();ctx.fill();
+      ctx.restore();return}
+    switch(type){
+      case"tree":{ // árvore do crepúsculo com copa em camadas e balanço
+        ctx.fillStyle="rgba(0,0,0,.30)";ctx.beginPath();ctx.ellipse(0,14,15,5,0,0,TAU);ctx.fill();
+        ctx.fillStyle="#33261a";ctx.fillRect(-2.5,2,5,12);
+        ctx.strokeStyle=ink;ctx.lineWidth=1.2;ctx.strokeRect(-2.5,2,5,12);
+        const sw=Math.sin(t*1.2+h)*1.2;
+        ctx.fillStyle="#1c3a27";ctx.beginPath();
+        ctx.arc(-7+sw*.5,-2,9,0,TAU);ctx.arc(7+sw*.5,-2,9,0,TAU);ctx.arc(sw,-10,10,0,TAU);ctx.fill();
+        ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.stroke();
+        ctx.fillStyle="#2c5a3c";ctx.beginPath();
+        ctx.arc(-3+sw,-9,6,0,TAU);ctx.arc(5+sw,-5,5,0,TAU);ctx.fill();
+        ctx.fillStyle="rgba(140,220,160,.25)";
+        ctx.beginPath();ctx.arc(-4+sw,-12,3.5,0,TAU);ctx.fill();break}
+      case"grave":{ // lápide com monte de terra, gravura e musgo
+        ctx.fillStyle="rgba(0,0,0,.30)";ctx.beginPath();ctx.ellipse(0,10,13,4,0,0,TAU);ctx.fill();
+        ctx.fillStyle="#2c3140";ctx.beginPath();ctx.ellipse(0,9,11,4,0,0,TAU);ctx.fill();
+        ctx.fillStyle="#4a4f63";ctx.beginPath();
+        ctx.moveTo(-6,10);ctx.lineTo(-6,-6);ctx.arc(0,-6,6,Math.PI,0);ctx.lineTo(6,10);
+        ctx.closePath();ctx.fill();
+        ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.stroke();
+        ctx.strokeStyle="rgba(0,0,0,.35)";ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(0,-1);ctx.moveTo(-3,-5);ctx.lineTo(3,-5);ctx.stroke();
+        ctx.fillStyle="rgba(110,200,130,.25)";ctx.fillRect(-6,5,4,3);break}
+      case"cactus":{ // cacto de braços com listras
+        ctx.fillStyle="rgba(0,0,0,.28)";ctx.beginPath();ctx.ellipse(0,12,11,4,0,0,TAU);ctx.fill();
+        ctx.fillStyle="#3f6e3c";ctx.beginPath();
+        ctx.moveTo(-4,12);ctx.lineTo(-4,-8);ctx.arc(0,-8,4,Math.PI,0);ctx.lineTo(4,12);
+        ctx.closePath();ctx.fill();
+        ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.stroke();
+        ctx.fillStyle="#3f6e3c";
+        ctx.fillRect(-10,-2,6,4);ctx.fillRect(-10,-8,4,8);
+        ctx.fillRect(4,2,6,4);ctx.fillRect(6,-3,4,7);
+        ctx.strokeStyle="rgba(0,0,0,.25)";ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(-1.5,-9);ctx.lineTo(-1.5,11);ctx.moveTo(1.5,-9);ctx.lineTo(1.5,11);ctx.stroke();
+        ctx.fillStyle="#ffd9e8";ctx.beginPath();ctx.arc(0,-11,1.8,0,TAU);ctx.fill();break}
+      case"ruin":{ // coluna partida com fiadas de tijolos
+        ctx.fillStyle="rgba(0,0,0,.30)";ctx.beginPath();ctx.ellipse(0,12,14,4.5,0,0,TAU);ctx.fill();
+        ctx.fillStyle="#3f4659";ctx.fillRect(-9,6,18,6);
+        ctx.strokeStyle=ink;ctx.lineWidth=1.4;ctx.strokeRect(-9,6,18,6);
+        ctx.fillStyle="#535d75";ctx.beginPath();
+        ctx.moveTo(-6,6);ctx.lineTo(-6,-12);ctx.lineTo(-2,-9);ctx.lineTo(1,-14);ctx.lineTo(4,-10);
+        ctx.lineTo(6,-12);ctx.lineTo(6,6);ctx.closePath();ctx.fill();
+        ctx.strokeStyle=ink;ctx.lineWidth=1.4;ctx.stroke();
+        ctx.strokeStyle="rgba(0,0,0,.25)";ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(-6,-4);ctx.lineTo(6,-4);ctx.moveTo(-6,1);ctx.lineTo(6,1);ctx.stroke();
+        ctx.fillStyle="rgba(255,255,255,.08)";ctx.fillRect(-6,-12,3,18);break}
+      case"shelf":{ // estante com lombadas de livros coloridas
+        ctx.fillStyle="rgba(0,0,0,.30)";ctx.beginPath();ctx.ellipse(0,14,14,4.5,0,0,TAU);ctx.fill();
+        ctx.fillStyle="#2e2114";ctx.fillRect(-11,-16,22,29);
+        ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.strokeRect(-11,-16,22,29);
+        ctx.fillStyle="#150d06";ctx.fillRect(-9,-14,18,25);
+        const cols=["#7a3a3a","#3a5a7a","#7a6a3a","#4a3a6a","#3a6a5a"];
+        for(let row=0;row<3;row++){const by=-14+row*8.4;
+          ctx.fillStyle="#3a2a18";ctx.fillRect(-9,by+6.6,18,1.6);
+          for(let k=0;k<5;k++){const bh=4.5+((h>>(row*5+k))%3);
+            ctx.fillStyle=cols[(h>>(row*3+k))%cols.length];
+            ctx.fillRect(-8.4+k*3.5,by+6.6-bh,2.8,bh)}}break}
+      case"star":{ // cristal astral flutuante
+        const bobc=Math.sin(t*2+h)*3;
+        ctx.fillStyle="rgba(0,0,0,.25)";
+        ctx.beginPath();ctx.ellipse(0,12,7-bobc*.4,2.6,0,0,TAU);ctx.fill();
+        glow(0,-2+bobc,22,GLOW.cyan,.5);
+        ctx.fillStyle="#6fa8e8";ctx.beginPath();
+        ctx.moveTo(0,-14+bobc);ctx.lineTo(7,-2+bobc);ctx.lineTo(0,8+bobc);ctx.lineTo(-7,-2+bobc);
+        ctx.closePath();ctx.fill();
+        ctx.strokeStyle=ink;ctx.lineWidth=1.4;ctx.stroke();
+        ctx.fillStyle="#bfe0ff";ctx.beginPath();
+        ctx.moveTo(0,-14+bobc);ctx.lineTo(7,-2+bobc);ctx.lineTo(0,-2+bobc);
+        ctx.closePath();ctx.fill();
+        ctx.fillStyle="rgba(255,255,255,.9)";ctx.fillRect(-1.4,-9+bobc,2,2);break}
+    }
+    ctx.restore();
+  },
   drawPlayer(x,y){
     const p=this.p,c=CHARS[p.char];
     // luz de tocha ao redor do herói (sempre, mesmo piscando)
-    glow(x,y+4,46,GLOW.gold,.14);
+    glow(x,y+4,64,GLOW.gold,.13);
     if(p.hurtT>0&&Math.floor(p.hurtT*16)%2)return; // pisca quando ferido
     const bob=Math.abs(Math.sin(p.walkT))*2,
-          sway=Math.sin(p.walkT*.5)*1.5; // ondular da capa
-    // sombra
-    ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.ellipse(x,y+12,11,4,0,0,TAU);ctx.fill();
-    // capa em dois tons, esvoaçante
+          sway=Math.sin(p.walkT*.5)*1.8,
+          fx=p.faceX>=0?1:-1, ink="rgba(6,9,18,.6)";
+    // sombra (fora do flip, no chão)
+    ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.ellipse(x,y+15,13,4.5,0,0,TAU);ctx.fill();
+    ctx.save();ctx.translate(x,y);ctx.scale(1.35*fx,1.35); // maior e espelhado pela direção
+    // capa em dois tons, esvoaçante, com contorno
     ctx.fillStyle=c.col;ctx.beginPath();
-    ctx.moveTo(x-9,y-6-bob);ctx.lineTo(x+9,y-6-bob);
-    ctx.lineTo(x+12+sway,y+10);ctx.lineTo(x-12+sway,y+10);ctx.fill();
-    ctx.fillStyle="rgba(0,0,20,.35)"; // metade inferior sombreada
-    ctx.beginPath();ctx.moveTo(x-10.5+sway*.5,y+2-bob*.5);ctx.lineTo(x+10.5+sway*.5,y+2-bob*.5);
-    ctx.lineTo(x+12+sway,y+10);ctx.lineTo(x-12+sway,y+10);ctx.fill();
+    ctx.moveTo(-9,-6-bob);ctx.lineTo(9,-6-bob);
+    ctx.lineTo(12+sway,10);ctx.lineTo(-12+sway,10);ctx.closePath();ctx.fill();
+    ctx.strokeStyle=ink;ctx.lineWidth=1.4;ctx.stroke();
+    ctx.fillStyle="rgba(0,0,20,.35)";
+    ctx.beginPath();ctx.moveTo(-10.5+sway*.5,2-bob*.5);ctx.lineTo(10.5+sway*.5,2-bob*.5);
+    ctx.lineTo(12+sway,10);ctx.lineTo(-12+sway,10);ctx.closePath();ctx.fill();
     // debrum dourado na barra da capa
-    ctx.strokeStyle="rgba(217,180,74,.8)";ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(x-12+sway,y+10);ctx.lineTo(x+12+sway,y+10);ctx.stroke();
-    // corpo
-    ctx.fillStyle="#232c44";ctx.fillRect(x-7,y-4-bob,14,14);
-    // broche dourado
-    ctx.fillStyle="#e9cd7a";ctx.beginPath();ctx.arc(x,y-3-bob,2,0,TAU);ctx.fill();
-    // cabeça
-    ctx.fillStyle="#f0d6b8";ctx.beginPath();ctx.arc(x,y-10-bob,7,0,TAU);ctx.fill();
-    // capuz com luz de borda
-    ctx.fillStyle=c.col;ctx.beginPath();ctx.arc(x,y-12-bob,7,Math.PI,TAU);ctx.fill();
+    ctx.strokeStyle="rgba(217,180,74,.85)";ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(-12+sway,10);ctx.lineTo(12+sway,10);ctx.stroke();
+    // túnica
+    ctx.fillStyle="#232c44";ctx.fillRect(-7,-4-bob,14,14);
+    ctx.strokeStyle=ink;ctx.lineWidth=1.2;ctx.strokeRect(-7,-4-bob,14,14);
+    // cinto com fivela dourada
+    ctx.fillStyle="#8a6d2f";ctx.fillRect(-7,3-bob,14,2.5);
+    ctx.fillStyle="#e9cd7a";ctx.fillRect(-1.6,2.4-bob,3.2,3.6);
+    // broche
+    ctx.fillStyle="#e9cd7a";ctx.beginPath();ctx.arc(0,-3.5-bob,2,0,TAU);ctx.fill();
+    // cabeça com rosto meio à sombra do capuz
+    ctx.fillStyle="#f0d6b8";ctx.beginPath();ctx.arc(0,-10-bob,7,0,TAU);ctx.fill();
+    ctx.fillStyle="rgba(30,22,50,.30)";
+    ctx.beginPath();ctx.arc(-1.5,-10-bob,7,Math.PI*.55,Math.PI*1.45);ctx.fill();
+    // capuz com contorno e luz de borda
+    ctx.fillStyle=c.col;ctx.beginPath();ctx.arc(0,-12-bob,7.4,Math.PI*.96,Math.PI*2.04);ctx.fill();
+    ctx.strokeStyle=ink;ctx.lineWidth=1.3;
+    ctx.beginPath();ctx.arc(0,-12-bob,7.4,Math.PI*.96,Math.PI*2.04);ctx.stroke();
     ctx.strokeStyle="rgba(255,245,210,.5)";ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.arc(x,y-12-bob,7,Math.PI*1.1,Math.PI*1.6);ctx.stroke();
-    // olhos na direção
+    ctx.beginPath();ctx.arc(0,-12-bob,7.4,Math.PI*1.1,Math.PI*1.6);ctx.stroke();
+    // olhos voltados para a frente
     ctx.fillStyle="#1a1426";
-    ctx.fillRect(x-3+p.faceX*2,y-11-bob,2,3);ctx.fillRect(x+1+p.faceX*2,y-11-bob,2,3);
+    ctx.fillRect(-1,-11-bob,2,3);ctx.fillRect(3,-11-bob,2,3);
+    // arma empunhada (varia por herói), balança ao andar
+    ctx.save();ctx.translate(8.5,-1-bob);ctx.rotate(Math.sin(p.walkT)*.14);
+    const wpn=c.weapon;
+    if(wpn==="martelo"){ // martelo de guerra
+      ctx.fillStyle="#5a4326";ctx.fillRect(-1.2,-9,2.4,13);
+      ctx.fillStyle="#9aa6b8";ctx.fillRect(-4.5,-11,9,5);
+      ctx.strokeStyle=ink;ctx.lineWidth=1.1;ctx.strokeRect(-4.5,-11,9,5);}
+    else if(wpn==="orbe"||wpn==="familiar"){ // cajado com gema viva
+      ctx.fillStyle="#5a4326";ctx.fillRect(-1.1,-12,2.2,16);
+      glow(0,-13,9,wpn==="orbe"?GLOW.purple:GLOW.green,.8);
+      ctx.fillStyle=wpn==="orbe"?"#c89bff":"#7be8a8";
+      ctx.beginPath();ctx.arc(0,-13,3,0,TAU);ctx.fill();
+      ctx.strokeStyle=ink;ctx.lineWidth=1;ctx.stroke();}
+    else{ // adaga lunar
+      ctx.fillStyle="#cfd8e8";ctx.beginPath();
+      ctx.moveTo(0,-12);ctx.lineTo(2.2,-4);ctx.lineTo(-2.2,-4);ctx.closePath();ctx.fill();
+      ctx.strokeStyle=ink;ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle="#8a6d2f";ctx.fillRect(-3.4,-4,6.8,1.8);
+      ctx.fillStyle="#5a4326";ctx.fillRect(-1,-2.2,2,4.5);}
+    ctx.restore();
+    ctx.restore();
   },
   drawEnemy(e,x,y){
     const flash=e.flash>0;
