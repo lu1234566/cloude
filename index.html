@@ -727,7 +727,7 @@ const Game={
   state:"menu", selChar:"arlen", selMap:"floresta", selMods:[],
   // entidades
   p:null, enemies:[], bullets:[], ebullets:[], gems:[], pickups:[], zones:[],
-  summons:[], parts:[], dnums:[], beams:[], shrines:[], merchant:null,
+  summons:[], parts:[], dnums:[], beams:[], shrines:[], merchant:null, deaths:[],
   time:0, kills:0, coins:0, level:1, xp:0, xpNext:10,
   weapons:[], passives:[], banished:new Set(), rerolls:0, banishes:0, revives:0,
   cam:{x:0,y:0}, shake:0, spawnT:0, eliteT:0, eventT:0, shrineT:0, merchT:0, banner:null,
@@ -745,7 +745,7 @@ const Game={
     // limpar
     this.enemies=[];this.bullets=[];this.ebullets=[];this.gems=[];this.pickups=[];this.zones=[];
     this.summons=[];this.parts=[];this.dnums=[];this.beams=[];this.banished=new Set();
-    this.shrines=[];this.merchant=null;
+    this.shrines=[];this.merchant=null;this.deaths=[];
     this.time=0;this.kills=0;this.coins=0;this.level=1;this.xp=0;this.xpNext=10;
     this.weapons=[];this.passives=[];this.dmgByW={};this.evos=0;this.boss=null;this.banner=null;
     this.spawnT=0;this.eliteT=20;this.eventT=45;this.shrineT=80;this.merchT=240;this.frozen=0;this.shake=0;
@@ -937,6 +937,7 @@ const Game={
       if(g.t<=0)this.gravPull=null;
       else{const dx=g.x-p.x,dy=g.y-p.y,l=Math.hypot(dx,dy)||1;
         if(l>80){p.x+=dx/l*150*dt;p.y+=dy/l*150*dt}}}
+    this.collideWorld(p,p.r); // cenário é sólido
     // regen
     if(s.regen>0){p.regenAcc+=s.regen*dt;if(p.regenAcc>=1){const h=Math.floor(p.regenAcc);p.regenAcc-=h;this.heal(h,true)}}
     if(p.hurtT>0)p.hurtT-=dt;
@@ -992,6 +993,29 @@ const Game={
     for(let gx=x0;gx<=x1;gx++)for(let gy=y0;gy<=y1;gy++){
       const a=g.get(gx+":"+gy);if(!a)continue;
       for(const e of a)if(!e.dead)fn(e)}},
+
+  /* ---------- colisão com o cenário ----------
+     as decorações nascem do hash da célula, então o colisor vem da mesma conta */
+  decoAt(gx,gy){
+    const h=((gx*73856093)^(gy*19349663))>>>0;
+    if(h%19!==0)return 0;
+    const type=MAPS[this.selMap].deco;
+    if(type==="star")return 0;                  // cristais do Abismo flutuam
+    const s=.8+((h>>4)%4)*.16;
+    if(((h>>6)%4)===0)return 9*s;               // rocha
+    return ({tree:9,grave:8,cactus:7,ruin:10,shelf:12}[type]||9)*s;
+  },
+  collideWorld(o,r){
+    const GS=70,
+      gx0=Math.floor((o.x-r-16)/GS),gx1=Math.floor((o.x+r+16)/GS),
+      gy0=Math.floor((o.y-r-16)/GS),gy1=Math.floor((o.y+r+16)/GS);
+    for(let gx=gx0;gx<=gx1;gx++)for(let gy=gy0;gy<=gy1;gy++){
+      const dr=this.decoAt(gx,gy);if(!dr)continue;
+      const cx=gx*GS+GS/2,cy=gy*GS+GS/2,
+        dx=o.x-cx,dy=o.y-cy,d2=dx*dx+dy*dy,mr=dr+r;
+      if(d2<mr*mr&&d2>0){const d=Math.sqrt(d2),push=mr-d;
+        o.x+=dx/d*push;o.y+=dy/d*push}}
+  },
 
   nearestEnemy(x,y,maxD=900){let best=null,bd=maxD*maxD;
     for(const e of this.enemies){const d=dist2({x,y},e);if(d<bd){bd=d;best=e}}return best},
@@ -1169,6 +1193,10 @@ const Game={
     if([25,50,100,200,400,800].includes(this.comboN)){this.comboPop=1;Aud.sfx("combo")}
     Aud.sfx("hit");
     for(let i=0;i<5;i++)this.parts.push({x:e.x,y:e.y,vx:rnd(-90,90),vy:rnd(-90,90),t:rnd(.2,.45),col:e.col,r:rnd(2,4)});
+    // animação de morte: o sprite encolhe, gira e afunda
+    if(this.deaths.length<40){const k=e.boss?"boss-"+e.type:"inimigo-"+e.type;
+      if(sprite(k))this.deaths.push({k,x:e.x,y:e.y,t:.38,max:.38,
+        rot:rnd(-.7,.7),sz:e.r*(e.boss?2.8:2.6),flip:this.p.x>e.x})}
     if(e.elite){this.ring(e.x,e.y,70,"#ffd24d");this.shakeIt(4);
       this.hitStop=Math.max(this.hitStop,.06)}
     // lifesteal Nyx
@@ -1218,7 +1246,7 @@ const Game={
   makeEnemy(type,tmul){
     const b=ETYPES[type],t=this.time,m=tmul||1;
     const hpScale=(1+t/60*.20+(this.infinite?Math.pow((t-this.DURATION)/120,1.4)*.5:0))*this.eHpMul*MAPS[this.selMap].mult*m;
-    return{type,x:0,y:0,r:b.r,hp:b.hp*hpScale,maxhp:b.hp*hpScale,
+    return{type,x:0,y:0,r:b.r,hp:b.hp*hpScale,maxhp:b.hp*hpScale,born:t,
       spd:b.spd*(1+Math.min(.6,t/600*.25))*this.eSpdMul,dmg:b.dmg*(1+t/300*.3),xp:b.xp,col:b.col,
       shape:b.shape,flash:0,kx:0,ky:0,phase:Math.random()*TAU,
       ranged:b.ranged,summoner:b.summoner,explode:b.explode,fly:b.fly,shield:b.shield,poison:b.poison,
@@ -1336,7 +1364,7 @@ const Game={
       hpScale=(1+t/900)*this.eHpMul*(this.infinite?1+(t-this.DURATION)/300:1);
     const e={type:id,boss:1,x:0,y:0,r:B.r,hp:B.hp*hpScale,maxhp:B.hp*hpScale,
       spd:B.spd*this.eSpdMul,dmg:B.dmg,xp:50,col:B.col,shape:"boss",flash:0,kx:0,ky:0,
-      pattern:B.pattern,pT:2,phase:0,nm:B.nm,final:B.final,bornT:t};
+      pattern:B.pattern,pT:2,phase:0,nm:B.nm,final:B.final,bornT:t,born:t};
     this.spawnAt(e);this.boss=e;
     meta.disc.b[id]=1;
     if(this.doubleBoss){ // Eco Sombrio: cópia espectral mais fraca
@@ -1404,6 +1432,8 @@ const Game={
         const ddx=e.x-o.x,ddy=e.y-o.y,dd=ddx*ddx+ddy*ddy,mr=e.r+o.r;
         if(dd<mr*mr&&dd>0){const l=Math.sqrt(dd),push=(mr-l)/2;
           e.x+=ddx/l*push;e.y+=ddy/l*push;o.x-=ddx/l*push;o.y-=ddy/l*push}}
+      // cenário bloqueia os rasteiros; voadores e bosses passam
+      if(!e.fly&&!e.boss)this.collideWorld(e,e.r*.8);
       // contato com o jogador
       if(!e.explode&&dist2(e,p)<(e.r+p.r)**2){
         this.damagePlayer(e.dmg);
@@ -1599,6 +1629,8 @@ const Game={
       d.y-=40*dt;d.t-=dt;if(d.t<=0)this.dnums.splice(i,1)}
     for(let i=this.beams.length-1;i>=0;i--){const b=this.beams[i];
       b.t-=dt;if(b.t<=0)this.beams.splice(i,1)}
+    for(let i=this.deaths.length-1;i>=0;i--){const d=this.deaths[i];
+      d.t-=dt;if(d.t<=0)this.deaths.splice(i,1)}
   },
   ring(x,y,r,col){this.beams.push({type:"ring",x,y,r,t:.4,max:.4,col})},
   shakeIt(v){if(meta.settings.shake)this.shake=Math.max(this.shake,v)},
@@ -1815,6 +1847,15 @@ const Game={
     for(const e of this.enemies){const ex=e.x+ox,ey=e.y+oy;
       if(ex<-60||ex>W+60||ey<-60||ey>H+60)continue;
       this.drawEnemy(e,ex,ey)}
+    // fantasmas de morte (sprite desvanecendo)
+    for(const d of this.deaths){const a=d.t/d.max,im=sprite(d.k);if(!im)continue;
+      ctx.save();ctx.globalAlpha=a*.85;
+      ctx.translate(d.x+ox,d.y+oy+(1-a)*7);
+      if(d.flip)ctx.scale(-1,1);
+      ctx.rotate(d.rot*(1-a));
+      const s2=d.sz*(.55+.45*a);
+      ctx.drawImage(im,-s2/2,-s2/2,s2,s2);ctx.restore()}
+    ctx.globalAlpha=1;
     // orbitais (armas)
     for(const w of this.weapons){const b=WEAPONS[w.id];
       if(b.type!=="orbit")continue;const ws=this.wStats(w),R=b.radius*ws.area+(ws.ev?25:0);
@@ -2027,8 +2068,13 @@ const Game={
        const bob2=Math.abs(Math.sin(p.walkT))*1.6, SZ=58,
          base={arlen:-1,mira:1,brakk:1,nyx:-1,tiko:1}[p.char]||1, // lado p/ onde a arte olha
          dir=p.faceX>=0?1:-1;
-       ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.ellipse(x,y+16,15,5,0,0,TAU);ctx.fill();
+       // andar: inclina no passo e comprime/estica; parado: respira devagar
+       const lean=p.moving?Math.sin(p.walkT)*.055+.04:Math.sin(this.time*1.8)*.012,
+             sq=p.moving?1+Math.sin(p.walkT*2)*.035:1+Math.sin(this.time*2)*.018;
+       ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();
+       ctx.ellipse(x,y+16,15*(p.moving?1+Math.abs(Math.sin(p.walkT))*.08:1),5,0,0,TAU);ctx.fill();
        ctx.save();ctx.translate(x,y-SZ*.16-bob2);ctx.scale(dir*base,1);
+       ctx.rotate(lean);ctx.scale(1,sq);
        if(strip){const fr=Math.floor(p.walkT*1.2)%4;
          ctx.drawImage(im,fr*128,0,128,128,-SZ/2,-SZ/2,SZ,SZ)}
        else ctx.drawImage(im,-SZ/2,-SZ/2,SZ,SZ);
@@ -2104,12 +2150,33 @@ const Game={
     // sprite raster pintado, quando disponível
     const im=sprite(e.boss?"boss-"+e.type:"inimigo-"+e.type);
     if(im){
-      const SZ=r*(e.boss?2.8:2.6),
-            pu=e.shape==="bomb"?1+Math.sin(this.time*10)*.10:
-               e.boss?1+Math.sin(this.time*3)*.04:1;
-      ctx.save();ctx.translate(x,y+(e.fly?wob:0));
+      const SZ=r*(e.boss?2.8:2.6), tt=this.time, ph=e.phase;
+      // animação procedural por tipo de criatura
+      let rot=0,sx=1,sy=1,oy2=0;
+      switch(e.shape){
+        case"blob":case"drip":{const w2=Math.sin(tt*8+ph); // gosma comprime e estica
+          sx=1+w2*.07;sy=1-w2*.07;oy2=-Math.abs(Math.sin(tt*4+ph))*1.5;break}
+        case"tri":rot=Math.sin(tt*10+ph)*.08; // saltita afoito
+          oy2=-Math.abs(Math.sin(tt*9+ph))*2;break;
+        case"sq":oy2=-Math.abs(Math.sin(tt*2.6+ph))*2.4; // passo pesado
+          rot=Math.sin(tt*2.6+ph)*.03;break;
+        case"bomb":{const w2=Math.sin(tt*10+ph);sx=sy=1+w2*.10;break} // pulsa prestes a estourar
+        case"dia":{const w2=Math.sin(tt*5+ph);sx=1+w2*.05;sy=1-w2*.05;break}
+        case"pent":rot=Math.sin(tt*2.2+ph)*.09;break; // balanço ritual
+        case"wing":sy=1+Math.sin(tt*12+ph)*.10; // batida de asas
+          rot=Math.sin(tt*3+ph)*.06;break;
+        case"shield":oy2=Math.sin(tt*4+ph)*1.2;break; // marcha firme
+        case"boss":
+          if(e.pattern==="bruxa"||e.pattern==="arauto")oy2=Math.sin(tt*2+ph)*5; // levita
+          else if(e.pattern==="colosso")oy2=-Math.abs(Math.sin(tt*1.6))*3;      // soca o chão
+          sx=sy=1+Math.sin(tt*3+ph)*.04;rot=Math.sin(tt*1.5+ph)*.03;break;
+      }
+      const pop=1+(e.flash>0?e.flash*1.4:0),               // tranco ao apanhar
+            scIn=Math.min(1,(tt-(e.born??tt))*4)||.01;     // nasce crescendo
+      ctx.save();ctx.translate(x,y+(e.fly?wob:0)+oy2);
       if(!e.boss&&this.p.x>e.x)ctx.scale(-1,1); // encara o herói
-      ctx.scale(pu,pu);
+      ctx.rotate(rot);
+      ctx.scale(sx*pop*scIn,sy*pop*scIn);
       if(flash)ctx.filter="brightness(2.4)";
       else if(e.echo)ctx.filter="grayscale(.8) brightness(.55)";
       else if(this.frozen>0)ctx.filter="saturate(.45) brightness(1.2) hue-rotate(150deg)";
