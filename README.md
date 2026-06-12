@@ -35,8 +35,9 @@ Sobreviva por **30 minutos** coletando cristais de XP, montando builds com até 
 - Baús comum/raro/lendário/**amaldiçoado**, bomba, imã, relógio congelante
 - **Loja permanente** com 13 melhorias, **18 conquistas**, **coleção com bestiário**,
 - **9 modificadores de partida** (Turbo, Caos, Bosses em dobro…) que multiplicam as moedas
-- Música procedural por WebAudio (temas de menu, mapa e boss), efeitos sintetizados,
-  números de dano coloridos por tipo, glow aditivo, salvamento local automático
+- **Trilha sonora orquestral** (5 faixas: menu, exploração, sombria, boss e vitória)
+  com crossfade entre cenas; música procedural por WebAudio como fallback; efeitos
+  sintetizados, números de dano coloridos por tipo, glow aditivo, salvamento automático
 
 ## Direção de arte
 
@@ -90,3 +91,11 @@ embutidos em base64 no `index.html` por `node tools/embed-assets.mjs` — o jogo
 continua sendo um arquivo único. Se um sprite não carregar, o desenho procedural
 equivalente entra como fallback automático. Os pisos do pacote recebem uma tinta
 *multiply* escura por mapa para fundir com a atmosfera do jogo.
+
+## Música
+
+As faixas MP3 vivem em `assets/music/` e são embutidas pelo mesmo
+`tools/embed-assets.mjs` (bloco `MUSIC`). Mapeamento: menu → `menu`; Floresta e
+Deserto → `calma`; Cripta, Ruínas, Biblioteca e Abismo → `sombria`; bosses → `boss`
+(com crossfade de ~1s na entrada e na saída); vitória → fanfarra única sem loop.
+Sem os MP3, o jogo cai de volta na trilha procedural sintetizada.
