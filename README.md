@@ -54,9 +54,31 @@ Inspirada nas capas clássicas de alta fantasia (tons de joia + iluminura):
 - Partículas atmosféricas por mapa (vagalumes, cinzas, poeira dourada, poeira estelar)
   e luz de tocha acompanhando o herói
 
+## Por que JavaScript/Canvas?
+
+É a linguagem certa para este gênero — o próprio *Vampire Survivors* foi construído em
+JavaScript (Phaser) e distribuído como executável de desktop; só foi portado para Unity
+anos depois, por causa de consoles. Aqui o jogo roda em qualquer navegador com clique
+duplo, e vira executável Windows com dois comandos (abaixo). A performance é tratada
+como em engine nativa: **grade espacial de colisões** (consultas O(1) em vez de varrer
+todos os inimigos por projétil), texturas de chão pré-renderizadas, sprites de brilho
+pré-rasterizados, tetos de partículas e **modo desempenho** nas configurações.
+
+## Executável para Windows (.exe)
+
+Requisitos: [Node.js LTS](https://nodejs.org). Na pasta do projeto:
+
+```bash
+npm install
+npm run dist     # gera dist/EclipseSurvivors.exe (portátil, sem instalação)
+```
+
+Para apenas testar a janela de desktop sem gerar o .exe: `npm start`.
+
 ## Arquitetura
 
-Arquivo único (`index.html`) organizado em módulos: `Save`, `Aud` (áudio), `Input`,
-dados (`CHARS`, `WEAPONS`, `PASSIVES`, `ETYPES`, `BOSSES`, `MAPS`, `MODS`, `SHOP`, `ACHS`),
-`Game` (loop/spawner/combate/render), `LevelUp` e `UI`. Os dados ficam separados da lógica
-para facilitar expansão.
+O jogo inteiro vive em `index.html` (zero dependências), organizado em módulos: `Save`,
+`Aud` (áudio), `Input`, dados (`CHARS`, `WEAPONS`, `PASSIVES`, `ETYPES`, `BOSSES`, `MAPS`,
+`MODS`, `SHOP`, `ACHS`), `Game` (loop/spawner/combate/render), `LevelUp` e `UI`. Os dados
+ficam separados da lógica para facilitar expansão. `electron/main.js` + `package.json`
+fazem o empacotamento desktop.

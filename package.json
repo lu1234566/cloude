@@ -1,0 +1,24 @@
+{
+  "name": "eclipse-survivors",
+  "productName": "Eclipse Survivors",
+  "version": "1.0.0",
+  "description": "Roguelite de sobrevivência em arena — bullet heaven 2D para PC",
+  "main": "electron/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.eclipsesurvivors.game",
+    "files": ["index.html", "electron/**"],
+    "win": {
+      "target": "portable",
+      "artifactName": "EclipseSurvivors.exe"
+    }
+  }
+}

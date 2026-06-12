@@ -241,6 +241,7 @@ small.hint{color:var(--dim)}
   <div class="setRow"><label>Efeitos</label><input class="slider" type="range" min="0" max="1" step=".05" id="sSfx"></div>
   <div class="setRow"><label>Números de dano</label><input type="checkbox" id="sDmg"></div>
   <div class="setRow"><label>Tremor de tela</label><input type="checkbox" id="sShake"></div>
+  <div class="setRow"><label>Modo desempenho</label><input type="checkbox" id="sLow"></div>
   <div class="setRow"><label>Mudo</label><input type="checkbox" id="sMute"></div>
   <button class="btn small" style="margin-top:14px" onclick="UI.wipeSave()">🗑 Apagar progresso</button>
 </div>
@@ -331,7 +332,9 @@ const GLOW={
   green:makeGlow("rgb(123,232,138)"), white:makeGlow("rgb(255,255,255)"),
   orange:makeGlow("rgb(255,179,107)")
 };
-function glow(x,y,r,spr,alpha=1){ctx.save();ctx.globalCompositeOperation="lighter";
+function glow(x,y,r,spr,alpha=1){
+  if(meta.settings.lowfx&&alpha<.4)return; // modo desempenho: corta brilhos sutis
+  ctx.save();ctx.globalCompositeOperation="lighter";
   ctx.globalAlpha=alpha;ctx.drawImage(spr,x-r,y-r,r*2,r*2);ctx.restore()}
 /* ---------- textura de chão orgânica (pré-renderizada, repete sem emendas) ---------- */
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
@@ -403,7 +406,7 @@ const store={
 const defMeta=()=>({coins:0,shop:{},chars:{arlen:1,mira:1,brakk:1},maps:{floresta:1},ach:{},
   disc:{w:{},e:{},en:{},b:{}},infinite:0,
   stats:{kills:0,coins:0,games:0,bestTime:0,bestLevel:0,playTime:0,bossKills:0,evolutions:0,wins:0},
-  settings:{master:.8,music:.55,sfx:.8,dmgNums:1,shake:1,mute:0}});
+  settings:{master:.8,music:.55,sfx:.8,dmgNums:1,shake:1,mute:0,lowfx:0}});
 let meta=defMeta();
 try{const raw=store.get();if(raw){const m=JSON.parse(raw);meta=Object.assign(defMeta(),m);
   meta.stats=Object.assign(defMeta().stats,m.stats||{});meta.settings=Object.assign(defMeta().settings,m.settings||{});
@@ -906,13 +909,14 @@ const Game={
     if(p.hurtT>0)p.hurtT-=dt;
     if(this.frozen>0)this.frozen-=dt;
     // atmosfera do mapa: vagalumes, cinzas, poeira de estrelas...
-    if(this.parts.length<150&&Math.random()<dt*9){
+    if(!meta.settings.lowfx&&this.parts.length<150&&Math.random()<dt*9){
       const ambCol={floresta:"#b8e87a",cripta:"#9a7be8",deserto:"#e8d49a",
         ruinas:"#ff9a5a",biblioteca:"#ffd98a",abismo:"#9ab8ff"}[this.selMap]||"#cfd8ff";
       this.parts.push({x:p.x+rnd(-W*.55,W*.55),y:p.y+rnd(-H*.55,H*.55),
         vx:rnd(-9,9),vy:this.selMap==="ruinas"?rnd(-26,-10):rnd(-12,5),
         t:rnd(2.2,4),col:ambCol+"55",r:rnd(1.4,2.6)});}
-    // armas
+    // armas (a grade espacial é reconstruída antes das consultas de colisão)
+    this.buildGrid();
     for(const w of this.weapons)this.fireWeapon(w,dt);
     this.updateSummons(dt);
     this.updateBullets(dt);
@@ -943,6 +947,19 @@ const Game={
     const area=s.area*(1+.06*(lvl-1))*(ev?1.5:1);
     return{dmg,cd,amount,area,b,lvl,ev};
   },
+  /* ---------- grade espacial: colisões deixam de varrer todos os inimigos ---------- */
+  GRID:96, grid:new Map(),
+  buildGrid(){const g=this.grid;g.clear();
+    for(const e of this.enemies){
+      const k=Math.floor(e.x/this.GRID)+":"+Math.floor(e.y/this.GRID);
+      const a=g.get(k);if(a)a.push(e);else g.set(k,[e])}},
+  forEachNear(x,y,r,fn){const G=this.GRID,g=this.grid,
+      x0=Math.floor((x-r)/G),x1=Math.floor((x+r)/G),
+      y0=Math.floor((y-r)/G),y1=Math.floor((y+r)/G);
+    for(let gx=x0;gx<=x1;gx++)for(let gy=y0;gy<=y1;gy++){
+      const a=g.get(gx+":"+gy);if(!a)continue;
+      for(const e of a)if(!e.dead)fn(e)}},
+
   nearestEnemy(x,y,maxD=900){let best=null,bd=maxD*maxD;
     for(const e of this.enemies){const d=dist2({x,y},e);if(d<bd){bd=d;best=e}}return best},
   fireWeapon(w,dt){
@@ -952,13 +969,14 @@ const Game={
       const n=ws.amount, R=b.radius*ws.area+(ws.ev?25:0);
       for(let i=0;i<n;i++){const a=w.angle+i*TAU/n,ox=p.x+Math.cos(a)*R,oy=p.y+Math.sin(a)*R,
         rr=(b.size*ws.area+4);
-        for(const e of this.enemies){if(Math.abs(e.x-ox)>e.r+rr||Math.abs(e.y-oy)>e.r+rr)continue;
+        this.forEachNear(ox,oy,rr+70,e=>{
+          if(Math.abs(e.x-ox)>e.r+rr||Math.abs(e.y-oy)>e.r+rr)return;
           if(dist2(e,{x:ox,y:oy})<(e.r+rr)**2){
             if(!e.hitT)e.hitT={};
             if((e.hitT[w.uid]||0)<=this.time){e.hitT[w.uid]=this.time+.5;
               this.hitEnemy(e,ws.dmg,w.id,{burn:b.burn,kb:30});
               if(ws.ev&&w.id==="orbe")this.explode(ox,oy,50*ws.area,ws.dmg*.6,w.id);
-            }}}}
+            }}})}
       w.t-=dt; return;
     }
     w.t-=dt; if(w.t>0)return;
@@ -981,13 +999,13 @@ const Game={
         break}
       case"swing":{w.t=ws.cd;const R=(b.radius)*ws.area;
         this.beams.push({type:"swing",x:p.x,y:p.y,r:R,t:.35,max:.35});
-        for(const e of this.enemies)if(dist2(e,p)<(R+e.r)**2)
-          this.hitEnemy(e,ws.dmg,w.id,{kb:b.kb*s.kb*(ws.ev?1.8:1)});
+        this.forEachNear(p.x,p.y,R+70,e=>{if(dist2(e,p)<(R+e.r)**2)
+          this.hitEnemy(e,ws.dmg,w.id,{kb:b.kb*s.kb*(ws.ev?1.8:1)})});
         this.shakeIt(ws.ev?6:3);Aud.sfx("boom");break}
       case"nova":{w.t=ws.cd;const R=b.radius*ws.area*(ws.ev?1.7:1);
         this.ring(p.x,p.y,R,"#ffe28a");
-        for(const e of this.enemies)if(dist2(e,p)<(R+e.r)**2)
-          this.hitEnemy(e,ws.dmg,w.id,{kb:b.kb*s.kb*(ws.ev?1.6:1)});
+        this.forEachNear(p.x,p.y,R+70,e=>{if(dist2(e,p)<(R+e.r)**2)
+          this.hitEnemy(e,ws.dmg,w.id,{kb:b.kb*s.kb*(ws.ev?1.6:1)})});
         this.shakeIt(3);Aud.sfx("boom");break}
       case"strike":{const list=this.enemies.filter(e=>dist2(e,p)<560*560);
         if(!list.length){w.t=.2;return} w.t=ws.cd;
@@ -1022,17 +1040,18 @@ const Game={
   },
   lightning(tgt,dmg,wid,chain,area){
     this.beams.push({type:"bolt",x:tgt.x,y:tgt.y,t:.18,max:.18});
-    for(const e of this.enemies)if(dist2(e,tgt)<(46*area)**2)this.hitEnemy(e,dmg,wid,{});
+    this.forEachNear(tgt.x,tgt.y,46*area+70,e=>{
+      if(dist2(e,tgt)<(46*area)**2)this.hitEnemy(e,dmg,wid,{})});
     if(chain>0){let nx=null,bd=190*190;
-      for(const e of this.enemies){if(e===tgt||e.zapped)continue;
-        const d=dist2(e,tgt);if(d<bd){bd=d;nx=e}}
+      this.forEachNear(tgt.x,tgt.y,260,e=>{if(e===tgt||e.zapped)return;
+        const d=dist2(e,tgt);if(d<bd){bd=d;nx=e}});
       if(nx){nx.zapped=1;setTimeout(()=>nx.zapped=0,100);
         this.beams.push({type:"chain",x1:tgt.x,y1:tgt.y,x2:nx.x,y2:nx.y,t:.15,max:.15});
         this.lightning(nx,dmg*.8,wid,chain-1,area)}}
   },
   explode(x,y,r,dmg,wid){
     this.ring(x,y,r,"#ffb36b");
-    for(const e of this.enemies)if(dist2(e,{x,y})<(r+e.r)**2)this.hitEnemy(e,dmg,wid,{kb:80});
+    this.forEachNear(x,y,r+70,e=>{if(dist2(e,{x,y})<(r+e.r)**2)this.hitEnemy(e,dmg,wid,{kb:80})});
     for(let i=0;i<8;i++)this.parts.push({x,y,vx:rnd(-120,120),vy:rnd(-120,120),t:rnd(.2,.5),col:"#ffb36b",r:3});
   },
 
@@ -1054,10 +1073,11 @@ const Game={
     for(let i=arr.length-1;i>=0;i--){const b=arr[i];
       b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
       let dead=b.life<=0;
-      if(!dead)for(const e of this.enemies){
-        if(Math.abs(e.x-b.x)>e.r+b.r||Math.abs(e.y-b.y)>e.r+b.r)continue;
+      if(!dead)this.forEachNear(b.x,b.y,b.r+70,e=>{
+        if(dead)return;
+        if(Math.abs(e.x-b.x)>e.r+b.r||Math.abs(e.y-b.y)>e.r+b.r)return;
         if(dist2(e,b)<(e.r+b.r)**2){
-          if(b.hitSet&&b.hitSet.has(e))continue;
+          if(b.hitSet&&b.hitSet.has(e))return;
           (b.hitSet=b.hitSet||new Set()).add(e);
           let d=b.dmg;
           if(e.shield){ // escudo frontal: reduz dano vindo da frente
@@ -1067,21 +1087,22 @@ const Game={
             if(diff<1.0)d*=.4;}
           this.hitEnemy(e,d,b.wid,{kb:60,slow:b.slow});
           if(b.boom)this.explode(b.x,b.y,70,b.boom,b.wid);
-          if(b.pierce>0)b.pierce--;else{dead=true;break}}}
+          if(b.pierce>0)b.pierce--;else dead=true;}});
       if(dead){arr[i]=arr[arr.length-1];arr.pop()}}
   },
   updateZones(dt){
     for(let i=this.zones.length-1;i>=0;i--){const z=this.zones[i];
       z.t-=dt;z.acc+=dt;
       if(z.acc>=z.tick){z.acc=0;
-        for(const e of this.enemies)if(dist2(e,z)<(z.r+e.r)**2){
+        this.forEachNear(z.x,z.y,z.r+70,e=>{if(dist2(e,z)<(z.r+e.r)**2){
           this.hitEnemy(e,z.dmg,z.wid,{});
-          if(z.bleed){e.bleedT=3;e.bleedD=z.dmg*.3}}}
+          if(z.bleed){e.bleedT=3;e.bleedD=z.dmg*.3}}})}
       if(z.t<=0)this.zones.splice(i,1)}
   },
 
   /* ---------- dano em inimigos ---------- */
   hitEnemy(e,dmg,wid,o={}){
+    if(e.dead)return;
     const s=this.st;
     let crit=Math.random()*100<s.crit;
     let d=dmg*(crit?s.critdmg:1);
@@ -1094,13 +1115,14 @@ const Game={
     if(o.burn){e.burnT=2*s.dur;e.burnD=d*.25*s.burnDmg}
     if(o.slow){e.slowT=Math.max(e.slowT||0,1.4*s.dur);e.slowF=Math.min(.9,o.slow)}
     if(e.reflect&&Math.random()<.25)this.damagePlayer(3);
-    if(meta.settings.dmgNums&&this.dnums.length<90)this.dnums.push({x:e.x+rnd(-8,8),y:e.y-e.r,t:.7,
+    if(meta.settings.dmgNums&&this.dnums.length<(meta.settings.lowfx?40:90))this.dnums.push({x:e.x+rnd(-8,8),y:e.y-e.r,t:.7,
       v:Math.round(d),crit,col:crit?"#ffd24d":(o.burn?"#ff8a5a":o.slow?"#aef0ff":wid==="raio"?"#e8e25a":"#fff")});
     if(e.hp<=0)this.killEnemy(e);
   },
   killEnemy(e){
+    if(e.dead)return;
     const idx=this.enemies.indexOf(e);if(idx<0)return;
-    this.enemies.splice(idx,1);
+    e.dead=1;this.enemies.splice(idx,1);
     this.kills++;meta.stats.kills++;
     Aud.sfx("hit");
     for(let i=0;i<5;i++)this.parts.push({x:e.x,y:e.y,vx:rnd(-90,90),vy:rnd(-90,90),t:rnd(.2,.45),col:e.col,r:rnd(2,4)});
@@ -1180,7 +1202,7 @@ const Game={
       const[,id]=this.bossSched.shift();this.spawnBoss(id)}
     // densidade
     this.spawnT-=dt;
-    const cap=Math.min(280,50+t/6),
+    const cap=Math.min(meta.settings.lowfx?240:340,50+t/6),
           interval=Math.max(.12,.9-t/1500);
     if(this.spawnT<=0&&this.enemies.length<cap){
       this.spawnT=interval;
@@ -1519,6 +1541,8 @@ const Game={
   },
   /* ---------- efeitos ---------- */
   updateFx(dt){
+    const PL=meta.settings.lowfx?60:170; // teto de partículas
+    if(this.parts.length>PL)this.parts.splice(0,this.parts.length-PL);
     for(let i=this.parts.length-1;i>=0;i--){const f=this.parts[i];
       f.x+=(f.vx||0)*dt;f.y+=(f.vy||0)*dt;f.t-=dt;if(f.t<=0)this.parts.splice(i,1)}
     for(let i=this.dnums.length-1;i>=0;i--){const d=this.dnums[i];
@@ -2265,10 +2289,12 @@ const UI={
     const s=meta.settings;
     $("sMaster").value=s.master;$("sMusic").value=s.music;$("sSfx").value=s.sfx;
     $("sDmg").checked=!!s.dmgNums;$("sShake").checked=!!s.shake;$("sMute").checked=!!s.mute;
+    $("sLow").checked=!!s.lowfx;
     const upd=()=>{s.master=+$("sMaster").value;s.music=+$("sMusic").value;s.sfx=+$("sSfx").value;
       s.dmgNums=$("sDmg").checked?1:0;s.shake=$("sShake").checked?1:0;s.mute=$("sMute").checked?1:0;
+      s.lowfx=$("sLow").checked?1:0;
       Aud.applyVol();save()};
-    for(const id of["sMaster","sMusic","sSfx","sDmg","sShake","sMute"])$(id).oninput=upd;
+    for(const id of["sMaster","sMusic","sSfx","sDmg","sShake","sMute","sLow"])$(id).oninput=upd;
     document.querySelector("#scrSet .back").onclick=()=>{
       if(this._fromPause){this.show(null);Game.pause();$("ovPause").classList.add("on")}else this.menu()};},
   wipeSave(){if(confirm("Apagar TODO o progresso?")){store.del();meta=defMeta();this.menu()}}
