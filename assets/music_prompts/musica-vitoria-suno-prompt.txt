@@ -1,0 +1,4 @@
+Title: musica-vitoria
+Prompt: instrumental, short triumphant victory fanfare, orchestral brass, bright strings, sparkling harp, antique gold heroic finish, no vocals, 15 to 30 seconds, not looped.
+Suggested duration: 0:26
+Format after export: MP3 or OGG

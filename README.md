@@ -82,3 +82,11 @@ O jogo inteiro vive em `index.html` (zero dependências), organizado em módulos
 `MODS`, `SHOP`, `ACHS`), `Game` (loop/spawner/combate/render), `LevelUp` e `UI`. Os dados
 ficam separados da lógica para facilitar expansão. `electron/main.js` + `package.json`
 fazem o empacotamento desktop.
+
+## Assets raster
+
+Os sprites pintados (heróis, bosses, inimigos e pisos) vivem em `assets/` e são
+embutidos em base64 no `index.html` por `node tools/embed-assets.mjs` — o jogo
+continua sendo um arquivo único. Se um sprite não carregar, o desenho procedural
+equivalente entra como fallback automático. Os pisos do pacote recebem uma tinta
+*multiply* escura por mapa para fundir com a atmosfera do jogo.
