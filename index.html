@@ -69,6 +69,11 @@ h2::after{content:" ☙";color:var(--gold2);font-size:.8em}
 .upCard::before{content:"";position:absolute;inset:5px;border:1px solid rgba(217,180,74,.18);
   border-radius:6px;pointer-events:none}
 .upCard:hover{transform:translateY(-5px) scale(1.03);box-shadow:inset 0 0 0 1px rgba(217,180,74,.3),0 8px 24px #000c}
+@keyframes cardIn{from{opacity:0;transform:translateY(26px) scale(.9)}to{opacity:1;transform:none}}
+#lvlCards .upCard{animation:cardIn .3s cubic-bezier(.2,.9,.3,1.25) backwards}
+#lvlCards .upCard:nth-child(2){animation-delay:.07s}
+#lvlCards .upCard:nth-child(3){animation-delay:.14s}
+#lvlCards .upCard:nth-child(4){animation-delay:.21s}
 .upCard .ic{font-size:40px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.7))}
 .upCard .nm{font-family:var(--serif);font-weight:700;margin:8px 0 4px;font-size:16.5px;letter-spacing:.5px}
 .upCard .lv{font-size:12px;color:var(--xp);margin-bottom:6px}
@@ -424,6 +429,7 @@ const Aud={ctx:null,master:null,mGain:null,sGain:null,musTimer:null,beat:0,mode:
   applyVol(){if(!this.ctx)return;const s=meta.settings,m=s.mute?0:s.master;
     this.master.gain.value=m;this.mGain.gain.value=s.music*.5;this.sGain.gain.value=s.sfx;},
   tone(f,dur,type="square",vol=.15,slide=0,delay=0){if(!this.ctx)return;const t=this.ctx.currentTime+delay;
+    f*=.97+Math.random()*.06; // leve variação de pitch a cada disparo
     const o=this.ctx.createOscillator(),g=this.ctx.createGain();
     o.type=type;o.frequency.setValueAtTime(f,t);
     if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,f+slide),t+dur);
@@ -448,6 +454,8 @@ const Aud={ctx:null,master:null,mGain:null,sGain:null,musTimer:null,beat:0,mode:
     case"boom":this.noise(.35,.3);this.tone(70,.3,"sine",.25,-30);break;
     case"win":[523,659,784,1047,1319,1568].forEach((f,i)=>this.tone(f,.35,"triangle",.15,0,i*.12));break;
     case"lose":[392,330,262,196].forEach((f,i)=>this.tone(f,.4,"sawtooth",.13,-20,i*.18));break;
+    case"crit":this.tone(1400,.05,"square",.07,-300);break;
+    case"combo":this.tone(660,.09,"triangle",.13);this.tone(990,.14,"triangle",.12,0,.07);break;
     case"freeze":this.tone(1800,.15,"sine",.07,-900);break;
     case"zap":this.tone(900,.08,"sawtooth",.09,-500);this.noise(.06,.07);break;
   }},
@@ -713,6 +721,7 @@ const Game={
   eHpMul:1,eSpdMul:1,xpDropMul:1,eliteMul:1,halfHP:0,noCure:0,modMult:1,
   timeScale:1, chaos:0, doubleBoss:0, desp:0, gravT:0, gravA:0, gravPull:null,
   buffT:{furia:0,fortuna:0,tempo:0}, dmgTaken:0, lowHP:0, usedShrines:0, bought:0, fastBoss:0, finalKill:0,
+  hitStop:0, flashT:0, flashCol:"160,210,255", comboN:0, comboT:0, comboPop:0, critSfxT:0, xpStreak:0, xpStreakT:0,
   infinite:false, won:false, runStart:0, tutT:0,
   DURATION:1800,
 
@@ -730,6 +739,7 @@ const Game={
     this.timeScale=1;this.chaos=0;this.doubleBoss=0;this.desp=0;this.gravT=0;this.gravPull=null;
     this.buffT={furia:0,fortuna:0,tempo:0};this.dmgTaken=0;this.lowHP=0;
     this.usedShrines=0;this.bought=0;this.fastBoss=0;this.finalKill=0;this.eclipseT=0;
+    this.hitStop=0;this.flashT=0;this.comboN=0;this.comboT=0;this.comboPop=0;this.xpStreak=0;
     this.infinite=false;this.won=false;this.tutT=14;this.runStart=Date.now();
     this.modMult=1;
     for(const id of this.selMods){const m=MODS.find(x=>x.id===id);m.f(this);this.modMult+=m.mult}
@@ -878,8 +888,16 @@ const Game={
 
   update(dt){
     const p=this.p,s=this.st;
+    // hit-stop: o mundo congela por um instante em impactos marcantes
+    if(this.hitStop>0){this.hitStop-=dt;return}
     dt*=this.timeScale; // Modo Turbo
     this.time+=dt;meta.stats.playTime+=dt;
+    // flashes de tela, sequência de abates e escala de pitch do XP
+    if(this.flashT>0)this.flashT-=dt;
+    if(this.critSfxT>0)this.critSfxT-=dt;
+    if(this.comboPop>0)this.comboPop-=dt*3;
+    if(this.comboT>0){this.comboT-=dt;if(this.comboT<=0)this.comboN=0}
+    if(this.xpStreakT>0){this.xpStreakT-=dt;if(this.xpStreakT<=0)this.xpStreak=0}
     // buffs temporários expiram
     let buffEnd=false;
     for(const k in this.buffT)if(this.buffT[k]>0){this.buffT[k]-=dt;if(this.buffT[k]<=0)buffEnd=true}
@@ -1110,8 +1128,14 @@ const Game={
     if(e.fort)d*=.7;
     e.hp-=d;e.flash=.1;
     this.dmgByW[wid]=(this.dmgByW[wid]||0)+d;
-    if(o.kb&&!e.boss){const a=Math.atan2(e.y-this.p.y,e.x-this.p.x);
-      e.kx=(e.kx||0)+Math.cos(a)*o.kb;e.ky=(e.ky||0)+Math.sin(a)*o.kb;}
+    if(o.kb&&!e.boss){const a=Math.atan2(e.y-this.p.y,e.x-this.p.x),
+      kb=o.kb*(crit?1.5:1); // crítico empurra mais
+      e.kx=(e.kx||0)+Math.cos(a)*kb;e.ky=(e.ky||0)+Math.sin(a)*kb;}
+    if(crit){ // faísca + estalo agudo + micro congelamento
+      if(this.parts.length<150)this.parts.push({x:e.x,y:e.y,vx:rnd(-160,160),vy:rnd(-160,160),
+        t:.22,col:"#ffe9a8",r:2.5});
+      if(this.critSfxT<=0){this.critSfxT=.09;Aud.sfx("crit");
+        if(d>60)this.hitStop=Math.max(this.hitStop,.035)}}
     if(o.burn){e.burnT=2*s.dur;e.burnD=d*.25*s.burnDmg}
     if(o.slow){e.slowT=Math.max(e.slowT||0,1.4*s.dur);e.slowF=Math.min(.9,o.slow)}
     if(e.reflect&&Math.random()<.25)this.damagePlayer(3);
@@ -1124,8 +1148,14 @@ const Game={
     const idx=this.enemies.indexOf(e);if(idx<0)return;
     e.dead=1;this.enemies.splice(idx,1);
     this.kills++;meta.stats.kills++;
+    // sequência de abates: janela rolante de 2,5s com marcos sonoros
+    this.comboN++;this.comboT=2.5;
+    if(this.comboN>=15)this.comboPop=Math.max(this.comboPop,.4);
+    if([25,50,100,200,400,800].includes(this.comboN)){this.comboPop=1;Aud.sfx("combo")}
     Aud.sfx("hit");
     for(let i=0;i<5;i++)this.parts.push({x:e.x,y:e.y,vx:rnd(-90,90),vy:rnd(-90,90),t:rnd(.2,.45),col:e.col,r:rnd(2,4)});
+    if(e.elite){this.ring(e.x,e.y,70,"#ffd24d");this.shakeIt(4);
+      this.hitStop=Math.max(this.hitStop,.06)}
     // lifesteal Nyx
     if(this.st.lifesteal&&Math.random()<.25)this.heal(2,true);
     if(e.vamp)for(const o of this.enemies)if(dist2(o,e)<150*150)o.hp=Math.min(o.maxhp,o.hp+8);
@@ -1155,6 +1185,7 @@ const Game={
     if(p.hurtT>0)return;
     const d=Math.max(1,raw-s.armor);
     p.hp-=d;p.hurtT=.5;this.shakeIt(4);Aud.sfx("hurt");
+    this.flashT=.18;this.flashCol="255,40,70";
     this.dmgTaken+=d;
     if(p.hp>0&&p.hp<=1.5)this.lowHP=1;
     if(meta.settings.dmgNums)this.dnums.push({x:p.x,y:p.y-20,t:.8,v:Math.round(d),col:"#ff5566"});
@@ -1304,6 +1335,7 @@ const Game={
     meta.stats.bossKills++;
     if(this.time-(e.bornT||0)<30)this.fastBoss=1;
     if(e.echo){this.toast("☠ Eco sombrio dissipado!");return} // cópia não conta como o boss real
+    this.hitStop=Math.max(this.hitStop,.22);this.flashT=.4;this.flashCol="255,210,80";this.shakeIt(12);
     this.boss=null;$("bossBar").style.display="none";
     Aud.startMusic(MAPS[this.selMap].mus||"calm");Aud.sfx("chest");
     this.pickups.push({x:e.x,y:e.y,kind:e.final?"chestL":"chestR"});
@@ -1441,7 +1473,10 @@ const Game={
         g.x+=dx/l*sp*dt;g.y+=dy/l*sp*dt;}
       if(d<(p.r+8)**2){this.gems.splice(i,1);
         let v=g.v*s.xpgain*(this.eclipseT>0?2:1);
-        this.gainXP(v);Aud.sfx("xp")}}
+        this.gainXP(v);
+        // pitch sobe a cada cristal em sequência — coleta em cadeia soa como música
+        this.xpStreakT=1;this.xpStreak=Math.min(24,this.xpStreak+1);
+        Aud.tone(740*Math.pow(1.059,this.xpStreak),.07,"sine",.06)}}
     if(this.eclipseT>0)this.eclipseT-=dt;
     for(let i=this.pickups.length-1;i>=0;i--){const k=this.pickups[i];
       const d=dist2(k,p);
@@ -1570,7 +1605,8 @@ const Game={
     if(evoW){evoW.evolved=true;this.evos++;meta.stats.evolutions++;meta.disc.e[evoW.id]=1;
       const ev=WEAPONS[evoW.id].evo;
       rewards.push({ic:ev.ic,nm:"EVOLUÇÃO: "+ev.nm,ds:ev.ds,rar:"lendaria"});
-      Aud.sfx("evo");this.ring(this.p.x,this.p.y,300,"#ffd24d");n--;}
+      Aud.sfx("evo");this.ring(this.p.x,this.p.y,300,"#ffd24d");
+      this.flashT=.45;this.flashCol="255,210,80";n--;}
     // 2) upgrades aleatórios
     for(let i=0;i<n;i++){
       const ups=this.weapons.filter(w=>w.lvl<WMAX&&!w.evolved),
@@ -1833,6 +1869,21 @@ const Game={
     const vg2=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.45,W/2,H/2,Math.max(W,H)*.75);
     vg2.addColorStop(0,"rgba(0,0,0,0)");vg2.addColorStop(1,"rgba(5,0,15,.4)");
     ctx.fillStyle=vg2;ctx.fillRect(0,0,W,H);
+    // contador de sequência de abates (aparece a partir de 15)
+    if(this.comboN>=15){
+      const pop=Math.max(0,this.comboPop),
+            size=Math.round(17+Math.min(20,this.comboN*.06)+pop*10);
+      ctx.textAlign="center";
+      ctx.font="bold "+size+"px Palatino, Georgia, serif";
+      const cy=H*.16;
+      ctx.fillStyle="rgba(0,0,0,.8)";ctx.fillText("✦ "+this.comboN+" ABATES ✦",W/2+2,cy+2);
+      const cg=ctx.createLinearGradient(0,cy-size,0,cy+4);
+      cg.addColorStop(0,"#f8ecc2");cg.addColorStop(1,"#d9b44a");
+      ctx.fillStyle=cg;ctx.fillText("✦ "+this.comboN+" ABATES ✦",W/2,cy);}
+    // flash de tela (dano, level up, evolução, boss)
+    if(this.flashT>0){
+      ctx.fillStyle=`rgba(${this.flashCol},${Math.min(.5,this.flashT*1.6)})`;
+      ctx.fillRect(0,0,W,H)}
     // faixa cerimonial de entrada do boss: letterbox + nome em ouro
     if(this.banner){const bn=this.banner;
       {
@@ -2105,6 +2156,7 @@ const Game={
 const LevelUp={banishMode:false,
   open(){
     Game.state="level";Aud.sfx("level");
+    Game.flashT=.25;Game.flashCol="140,210,255";
     Game.ring(Game.p.x,Game.p.y,120,"#7be3ff");
     $("lvlNum").textContent=Game.level;
     this.banishMode=false;$("banishHint").style.display="none";
