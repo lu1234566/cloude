@@ -184,7 +184,8 @@ small.hint{color:var(--dim)}
   <div class="runeLine">᛫ ᚠᛁᚱᛖ ᛫ ᛋᛏᚨᚱ ᛫ ᛖᚲᛚᛁᛈᛋᛖ ᛫</div>
   <div class="tag">Sobreviva às hordas. Monte sua build. Quebre o jogo.</div>
   <div class="coins" id="menuCoins"></div>
-  <button class="btn primary" onclick="UI.charSelect()">▶ &nbsp;Jogar</button>
+  <button class="btn primary" onclick="UI.play()">▶ &nbsp;Jogar</button>
+  <button class="btn" onclick="UI.challenges()">🎯 &nbsp;Desafios</button>
   <button class="btn" onclick="UI.shop()">🏪 &nbsp;Loja</button>
   <button class="btn" onclick="UI.achievements()">🏆 &nbsp;Conquistas</button>
   <button class="btn" onclick="UI.collection()">📖 &nbsp;Coleção</button>
@@ -221,6 +222,16 @@ small.hint{color:var(--dim)}
   <div class="coins" id="shopCoins"></div>
   <h2>🏪 Loja de Melhorias Permanentes</h2>
   <div id="shopList" style="display:flex;flex-direction:column;align-items:center"></div>
+</div>
+
+<!-- ============ CHALLENGES ============ -->
+<div class="screen" id="scrChal">
+  <button class="btn small back" onclick="UI.menu()">← Menu</button>
+  <h2>🎯 Desafios</h2>
+  <div style="color:var(--dim);font-size:13px;text-align:center;max-width:520px;margin-bottom:10px">
+    Regras especiais e recompensa única em moedas. Escolha o herói e o mapa em seguida.
+    Desafios rendem +50% de moedas e ignoram o Modo Infinito.</div>
+  <div class="grid" id="chalGrid"></div>
 </div>
 
 <!-- ============ ACHIEVEMENTS ============ -->
@@ -424,8 +435,8 @@ const store={
   del(){try{localStorage.removeItem(SAVE_KEY)}catch(e){delete memStore[SAVE_KEY]}}
 };
 const defMeta=()=>({coins:0,shop:{},chars:{arlen:1,mira:1,brakk:1},maps:{floresta:1},ach:{},
-  disc:{w:{},e:{},en:{},b:{}},infinite:0,
-  stats:{kills:0,coins:0,games:0,bestTime:0,bestLevel:0,playTime:0,bossKills:0,evolutions:0,wins:0},
+  disc:{w:{},e:{},en:{},b:{},u:{}},infinite:0,records:{time:0,kills:0,level:0,combo:0},chal:{},
+  stats:{kills:0,coins:0,games:0,bestTime:0,bestLevel:0,playTime:0,bossKills:0,evolutions:0,wins:0,unions:0},
   settings:{master:.8,music:.55,sfx:.8,dmgNums:1,shake:1,mute:0,lowfx:0}});
 let meta=defMeta();
 try{const raw=store.get();if(raw){const m=JSON.parse(raw);meta=Object.assign(defMeta(),m);
@@ -643,7 +654,22 @@ const WEAPONS={
   tambor:{nm:"Tambor Trovão",ic:"🥁",type:"nova",dmg:14,cd:3.0,radius:130,kb:220,
     ds:"Ondas sonoras empurram e ferem hordas.",evo:{nm:"Ressonância Final",ic:"📯",req:"eco",
     ds:"Ondas gigantescas que varrem a tela."}},
+  /* uniões: nascem da fusão de duas armas evoluídas (não aparecem nas escolhas) */
+  lamina:{nm:"Lâmina do Eclipse",ic:"🌗",type:"dirShot",dmg:18,cd:.65,amount:7,speed:560,pierce:999,
+    unionBoom:1,union:1,ds:"Leque de lâminas sol-e-lua que atravessam tudo e explodem."},
+  cosmos:{nm:"Cosmos Ardente",ic:"☀",type:"orbit",dmg:12,cd:.5,amount:5,radius:120,rot:3.0,size:15,
+    burn:1,exploHit:1,union:1,ds:"Um sistema solar em chamas orbita você, explodindo ao contato."},
+  juizo:{nm:"Juízo do Inverno",ic:"🌨",type:"strike",dmg:22,cd:1.4,amount:3,radius:52,
+    chain:4,slowHit:1,union:1,ds:"Tempestade que congela e encadeia relâmpagos."},
 };
+const UNIONS=[
+  {id:"lamina",parts:["adagas","lanca"],nm:"Lâmina do Eclipse",ic:"🌗",
+    ds:"Chuva de Prata + Julgamento Solar fundidos: lâminas perfurantes explosivas."},
+  {id:"cosmos",parts:["orbe","livro"],nm:"Cosmos Ardente",ic:"☀",
+    ds:"Sistema Astral + Biblioteca Infernal fundidos: órbitas incendiárias explosivas."},
+  {id:"juizo",parts:["raio","cristal"],nm:"Juízo do Inverno",ic:"🌨",
+    ds:"Tempestade Divina + Prisão Glacial fundidas: raios em cadeia que congelam."},
+];
 const MAXW=6,MAXP=6,WMAX=8,PMAX=5;
 
 /* ================= DADOS — INIMIGOS ================= */
@@ -714,6 +740,30 @@ const MODS=[
   {id:"caos",nm:"Modo Caos",ds:"Todos os tipos de inimigos desde o início",mult:.35,f:g=>g.chaos=1},
   {id:"boss2",nm:"Eco Sombrio",ds:"Bosses surgem em dobro",mult:.45,f:g=>g.doubleBoss=1},
 ];
+/* ================= DADOS — DESAFIOS =================
+   cada desafio tem regra (f: aplica no Game), meta (goal: tempo em s),
+   recompensa única e descrição da condição de vitória */
+const CHALLENGES=[
+  {id:"onlyone",nm:"Voto de Pobreza",ic:"🗡",goal:600,rw:600,
+    ds:"Sobreviva 10 min — você só pode ter UMA arma.",
+    f:g=>{g.maxWeapons=1}},
+  {id:"noevo",nm:"Forma Pura",ic:"🚫",goal:600,rw:600,
+    ds:"Sobreviva 10 min sem evoluir nenhuma arma.",
+    f:g=>{g.banEvo=1},fail:g=>!g.noEvoRun},
+  {id:"frenzy",nm:"Velocidade Demoníaca",ic:"💨",goal:600,rw:700,
+    ds:"Sobreviva 10 min com inimigos no dobro da velocidade.",
+    f:g=>{g.eSpdMul*=2}},
+  {id:"bossrush",nm:"Marcha dos Titãs",ic:"☠",goal:900,rw:900,
+    ds:"Sobreviva 15 min — um boss surge a cada 3 minutos.",
+    f:g=>{g.bossSched=[[180,"guardiao"],[360,"bruxa"],[540,"colosso"],
+      [720,"arauto"],[900,"devorador"]]}},
+  {id:"glass",nm:"Coração de Vidro",ic:"🫀",goal:480,rw:800,
+    ds:"Sobreviva 8 min começando com apenas 1 de vida.",
+    f:g=>{g.oneHP=1}},
+  {id:"famine",nm:"Fome Eterna",ic:"🍂",goal:600,rw:700,
+    ds:"Sobreviva 10 min com metade do XP e sem cura.",
+    f:g=>{g.xpDropMul*=.5;g.noCure=1}},
+];
 /* ================= DADOS — SANTUÁRIOS ================= */
 const SHRINE_COL={vida:"#7be88a",furia:"#ff6b6b",fortuna:"#5dd97a",tempo:"#8ab4ff",maldicao:"#c06aff"};
 const SHRINE_IC={vida:"❤",furia:"🔥",fortuna:"🍀",tempo:"⏳",maldicao:"💀"};
@@ -770,6 +820,7 @@ const Game={
   timeScale:1, chaos:0, doubleBoss:0, desp:0, gravT:0, gravA:0, gravPull:null,
   buffT:{furia:0,fortuna:0,tempo:0}, dmgTaken:0, lowHP:0, usedShrines:0, bought:0, fastBoss:0, finalKill:0,
   hitStop:0, flashT:0, flashCol:"160,210,255", comboN:0, comboT:0, comboPop:0, critSfxT:0, xpStreak:0, xpStreakT:0,
+  comboMax:0, unions:0, noEvoRun:true, challenge:null,
   infinite:false, won:false, runStart:0, tutT:0,
   DURATION:1800,
 
@@ -786,11 +837,17 @@ const Game={
     this.eHpMul=1;this.eSpdMul=1;this.xpDropMul=1;this.eliteMul=1;this.halfHP=0;this.noCure=0;
     this.timeScale=1;this.chaos=0;this.doubleBoss=0;this.desp=0;this.gravT=0;this.gravPull=null;
     this.buffT={furia:0,fortuna:0,tempo:0};this.dmgTaken=0;this.lowHP=0;
-    this.usedShrines=0;this.bought=0;this.fastBoss=0;this.finalKill=0;this.eclipseT=0;
+    this.usedShrines=0;this.bought=0;this.fastBoss=0;this.finalKill=0;this.eclipseT=0;this.unions=0;
+    this.comboMax=0;this.noEvoRun=true;this.maxWeapons=MAXW;this.banEvo=0;this.oneHP=0;
     this.hitStop=0;this.flashT=0;this.comboN=0;this.comboT=0;this.comboPop=0;this.xpStreak=0;
     this.infinite=false;this.won=false;this.tutT=14;this.runStart=Date.now();
     this.modMult=1;
+    // bosses agendados: mini-bosses 5/10 min, intermediário 15, arauto 25, final 29
+    this.bossSched=[[300,"guardiao"],[600,"bruxa"],[900,"colosso"],[1500,"arauto"],[1740,"devorador"]];
     for(const id of this.selMods){const m=MODS.find(x=>x.id===id);m.f(this);this.modMult+=m.mult}
+    // desafio (sobrepõe modificadores e dá recompensa única; pode redefinir bossSched)
+    if(this.challenge){const ch=CHALLENGES.find(c=>c.id===this.challenge);
+      if(ch){this.modMult+=.5;ch.f(this)}}
     this.rerolls=(shop.reroll||0);this.banishes=(shop.banish||0);this.revives=(shop.revive||0);
     // player
     this.p={x:0,y:0,r:13,hp:0,maxhp:0,hurtT:0,faceX:1,faceY:0,char:this.selChar,
@@ -798,8 +855,7 @@ const Game={
     this.addWeapon(c.weapon);
     this.recalc();
     this.p.hp=this.p.maxhp*(this.halfHP?.5:1);
-    // bosses agendados: mini-bosses 5/10 min, intermediário 15, arauto 25, final 29
-    this.bossSched=[[300,"guardiao"],[600,"bruxa"],[900,"colosso"],[1500,"arauto"],[1740,"devorador"]];
+    if(this.oneHP)this.p.hp=1;
     this.state="play";
     UI.show(null);$("hud").classList.add("on");
     Aud.startMusic(MAPS[this.selMap].mus||"calm");
@@ -1008,12 +1064,12 @@ const Game={
 
   /* ---------- ARMAS ---------- */
   wStats(w){
-    const b=WEAPONS[w.id],s=this.st,lvl=w.lvl,ev=w.evolved;
-    const dmg=b.dmg*(1+.22*(lvl-1))*(ev?2.6:1)*s.dmg*(b.type==="summon"?s.summonDmg:1);
+    const b=WEAPONS[w.id],s=this.st,lvl=w.lvl,un=!!b.union,ev=w.evolved||un;
+    const dmg=b.dmg*(1+.22*(lvl-1))*(ev?2.6:1)*(un?1.5:1)*s.dmg*(b.type==="summon"?s.summonDmg:1);
     const cd=b.cd*(1-Math.min(.45,.04*(lvl-1)))*(ev?.8:1)/(s.atkspd)*(1-Math.min(.5,s.cdr));
     const amount=(b.amount||1)+Math.floor((lvl-1)/2)+(b.type!=="swing"&&b.type!=="nova"?s.amount:0)+(ev?2:0);
-    const area=s.area*(1+.06*(lvl-1))*(ev?1.5:1);
-    return{dmg,cd,amount,area,b,lvl,ev};
+    const area=s.area*(1+.06*(lvl-1))*(ev?1.5:1)*(un?1.2:1);
+    return{dmg,cd,amount,area,b,lvl,ev,un};
   },
   /* ---------- grade espacial: colisões deixam de varrer todos os inimigos ---------- */
   GRID:96, grid:new Map(),
@@ -1066,7 +1122,7 @@ const Game={
             if(!e.hitT)e.hitT={};
             if((e.hitT[w.uid]||0)<=this.time){e.hitT[w.uid]=this.time+.5;
               this.hitEnemy(e,ws.dmg,w.id,{burn:b.burn,kb:30});
-              if(ws.ev&&w.id==="orbe")this.explode(ox,oy,50*ws.area,ws.dmg*.6,w.id);
+              if((ws.ev&&w.id==="orbe")||b.exploHit)this.explode(ox,oy,50*ws.area,ws.dmg*.6,w.id);
             }}})}
       w.t-=dt; return;
     }
@@ -1077,7 +1133,9 @@ const Game={
         for(let i=0;i<ws.amount;i++){
           const spread=ws.ev?(i-(ws.amount-1)/2)*.18:rnd(-.06,.06);
           this.bullets.push({x:p.x,y:p.y,vx:Math.cos(base+spread)*b.speed,vy:Math.sin(base+spread)*b.speed,
-            r:5,dmg:ws.dmg,life:1.4,pierce:ws.ev?6:b.pierce,wid:w.id,col:ws.ev?"#cfe8ff":"#9fd2ff",shape:"dagger"});}
+            r:b.union?7:5,dmg:ws.dmg,life:1.4,pierce:ws.ev?(b.pierce||6):b.pierce,wid:w.id,
+            col:b.union?"#ffe9a8":ws.ev?"#cfe8ff":"#9fd2ff",shape:"dagger",
+            boom:b.unionBoom?ws.dmg*.7:0});}
         Aud.sfx("hit");break}
       case"randShot":{w.t=ws.cd;
         for(let i=0;i<ws.amount;i++){const tgt=this.nearestEnemy(p.x+rnd(-300,300),p.y+rnd(-300,300));
@@ -1100,9 +1158,10 @@ const Game={
         this.shakeIt(3);Aud.sfx("boom");break}
       case"strike":{const list=this.enemies.filter(e=>dist2(e,p)<560*560);
         if(!list.length){w.t=.2;return} w.t=ws.cd;
+        const chain=b.chain||(ws.ev?3:0);
         for(let i=0;i<ws.amount;i++){const tgt=pick(list);
-          this.lightning(tgt,ws.dmg,w.id,ws.ev?3:0,ws.area);}
-        Aud.sfx("zap");break}
+          this.lightning(tgt,ws.dmg,w.id,chain,ws.area,b.slowHit?(.7*s.slowPow):0);}
+        if(b.slowHit)Aud.sfx("freeze");else Aud.sfx("zap");break}
       case"zone":{w.t=ws.cd;
         for(let i=0;i<ws.amount;i++){
           const tgt=this.nearestEnemy(p.x,p.y,420),
@@ -1129,16 +1188,16 @@ const Game={
         break}
     }
   },
-  lightning(tgt,dmg,wid,chain,area){
+  lightning(tgt,dmg,wid,chain,area,slow){
     this.beams.push({type:"bolt",x:tgt.x,y:tgt.y,t:.18,max:.18});
     this.forEachNear(tgt.x,tgt.y,46*area+70,e=>{
-      if(dist2(e,tgt)<(46*area)**2)this.hitEnemy(e,dmg,wid,{})});
+      if(dist2(e,tgt)<(46*area)**2)this.hitEnemy(e,dmg,wid,slow?{slow}:{})});
     if(chain>0){let nx=null,bd=190*190;
       this.forEachNear(tgt.x,tgt.y,260,e=>{if(e===tgt||e.zapped)return;
         const d=dist2(e,tgt);if(d<bd){bd=d;nx=e}});
       if(nx){nx.zapped=1;setTimeout(()=>nx.zapped=0,100);
         this.beams.push({type:"chain",x1:tgt.x,y1:tgt.y,x2:nx.x,y2:nx.y,t:.15,max:.15});
-        this.lightning(nx,dmg*.8,wid,chain-1,area)}}
+        this.lightning(nx,dmg*.8,wid,chain-1,area,slow)}}
   },
   explode(x,y,r,dmg,wid){
     this.ring(x,y,r,"#ffb36b");
@@ -1199,6 +1258,12 @@ const Game={
     let d=dmg*(crit?s.critdmg:1);
     if(e.elite||e.boss)d*=s.bossDmg;
     if(e.fort)d*=.7;
+    // REAÇÃO ELEMENTAL: alvos com 2+ status (fogo/gelo/sangramento) recebem dano extra
+    let react=false;
+    const nStatus=(e.burnT>0?1:0)+(e.slowT>0?1:0)+(e.bleedT>0?1:0);
+    if(nStatus>=2){d*=1.35;react=true;
+      if(this.parts.length<150)this.parts.push({x:e.x,y:e.y-e.r,vx:rnd(-50,50),vy:rnd(-70,-20),
+        t:.3,col:"#d06aff",r:3});}
     e.hp-=d;e.flash=.1;
     this.dmgByW[wid]=(this.dmgByW[wid]||0)+d;
     if(o.kb&&!e.boss){const a=Math.atan2(e.y-this.p.y,e.x-this.p.x),
@@ -1213,7 +1278,7 @@ const Game={
     if(o.slow){e.slowT=Math.max(e.slowT||0,1.4*s.dur);e.slowF=Math.min(.9,o.slow)}
     if(e.reflect&&Math.random()<.25)this.damagePlayer(3);
     if(meta.settings.dmgNums&&this.dnums.length<(meta.settings.lowfx?40:90))this.dnums.push({x:e.x+rnd(-8,8),y:e.y-e.r,t:.7,
-      v:Math.round(d),crit,col:crit?"#ffd24d":(o.burn?"#ff8a5a":o.slow?"#aef0ff":wid==="raio"?"#e8e25a":"#fff")});
+      v:Math.round(d),crit,col:react?"#d06aff":crit?"#ffd24d":(o.burn?"#ff8a5a":o.slow?"#aef0ff":wid==="raio"?"#e8e25a":"#fff")});
     if(e.hp<=0)this.killEnemy(e);
   },
   killEnemy(e){
@@ -1223,6 +1288,7 @@ const Game={
     this.kills++;meta.stats.kills++;
     // sequência de abates: janela rolante de 2,5s com marcos sonoros
     this.comboN++;this.comboT=2.5;
+    if(this.comboN>this.comboMax)this.comboMax=this.comboN;
     if(this.comboN>=15)this.comboPop=Math.max(this.comboPop,.4);
     if([25,50,100,200,400,800].includes(this.comboN)){this.comboPop=1;Aud.sfx("combo")}
     Aud.sfx("hit");
@@ -1680,14 +1746,30 @@ const Game={
     $("chestTitle").textContent=n>=5?"BAÚ LENDÁRIO!":n>=3?"Baú raro!":"Baú encontrado!";
     $("chestIc").textContent=n>=5?"👑":n>=3?"💎":"🎁";
     const rewards=[];
+    // 0) UNIÃO possível? (duas armas evoluídas se fundem numa lendária, liberando um slot)
+    const uni=this.banEvo?null:UNIONS.find(u=>!this.weapons.some(x=>x.id===u.id)&&
+      u.parts.every(pid=>this.weapons.some(x=>x.id===pid&&x.evolved)));
+    if(uni){
+      for(const pid of uni.parts){const i=this.weapons.findIndex(x=>x.id===pid);if(i>=0)this.weapons.splice(i,1)}
+      this.addWeapon(uni.id);
+      const uw=this.weapons.find(x=>x.id===uni.id);uw.lvl=WMAX; // a união já nasce no auge
+      meta.disc.u=meta.disc.u||{};meta.disc.u[uni.id]=1;
+      this.unions=(this.unions||0)+1;meta.stats.unions=(meta.stats.unions||0)+1;
+      rewards.push({ic:uni.ic,nm:"UNIÃO: "+uni.nm,ds:uni.ds,rar:"lendaria"});
+      Aud.sfx("evo");this.ring(this.p.x,this.p.y,340,"#ff7ad9");
+      this.flashT=.5;this.flashCol="255,120,220";this.hitStop=Math.max(this.hitStop,.15);n--;}
     // 1) evolução possível?
-    const evoW=this.weapons.find(w=>!w.evolved&&w.lvl>=WMAX&&
+    const evoW=this.banEvo?null:this.weapons.find(w=>!w.evolved&&w.lvl>=WMAX&&WEAPONS[w.id].evo&&
       this.passives.some(ps=>ps.id===WEAPONS[w.id].evo.req));
-    if(evoW){evoW.evolved=true;this.evos++;meta.stats.evolutions++;meta.disc.e[evoW.id]=1;
+    if(evoW&&n>0){evoW.evolved=true;this.evos++;this.noEvoRun=false;meta.stats.evolutions++;meta.disc.e[evoW.id]=1;
       const ev=WEAPONS[evoW.id].evo;
       rewards.push({ic:ev.ic,nm:"EVOLUÇÃO: "+ev.nm,ds:ev.ds,rar:"lendaria"});
       Aud.sfx("evo");this.ring(this.p.x,this.p.y,300,"#ffd24d");
-      this.flashT=.45;this.flashCol="255,210,80";n--;}
+      this.flashT=.45;this.flashCol="255,210,80";n--;
+      // avisa se esta evolução abriu caminho para uma fusão
+      const ready=UNIONS.find(u=>!this.weapons.some(x=>x.id===u.id)&&
+        u.parts.every(pid=>this.weapons.some(x=>x.id===pid&&x.evolved)));
+      if(ready)setTimeout(()=>this.toast("🔮 União pronta: "+ready.nm+"! Abra outro baú para fundir."),300);}
     // 2) upgrades aleatórios
     for(let i=0;i<n;i++){
       const ups=this.weapons.filter(w=>w.lvl<WMAX&&!w.evolved),
@@ -1741,6 +1823,17 @@ const Game={
     const run={time:this.time,kills:this.kills,win,level:this.level,evos:this.evos,
       finalKill:this.finalKill,fastBoss:this.fastBoss,lowHP:this.lowHP,
       shrines:this.usedShrines,bought:this.bought};
+    // recordes pessoais
+    const rec=meta.records,newRecs=[];
+    if(this.time>(rec.time||0)){rec.time=Math.floor(this.time);newRecs.push("⏱ Tempo "+fmtT(this.time))}
+    if(this.kills>(rec.kills||0)){rec.kills=this.kills;newRecs.push("💀 "+this.kills+" abates")}
+    if(this.level>(rec.level||0)){rec.level=this.level;newRecs.push("⬆ Nível "+this.level)}
+    if(this.comboMax>(rec.combo||0)){rec.combo=this.comboMax;newRecs.push("✦ Sequência "+this.comboMax)}
+    // desafio concluído?
+    let chalDone=null;
+    if(this.challenge){const ch=CHALLENGES.find(c=>c.id===this.challenge);
+      if(ch&&this.time>=ch.goal&&!(ch.fail&&ch.fail(this))&&!meta.chal[ch.id]){
+        meta.chal[ch.id]=1;meta.coins+=ch.rw;chalDone=ch}}
     // conquistas
     const newAch=[];
     for(const a of ACHS)if(!meta.ach[a.id]&&a.ck(meta,run)){meta.ach[a.id]=1;meta.coins+=a.rw;newAch.push(a)}
@@ -1768,8 +1861,11 @@ const Game={
       x.textContent=`${w.evolved?b.evo.ic:b.ic} ${w.evolved?b.evo.nm:b.nm} — ${Math.round(this.dmgByW[w.id]||0)} dano`;
       wl.appendChild(x)}
     const ul=$("endUnlocks");
-    ul.innerHTML=[...newAch.map(a=>`🏆 ${a.nm} (+${a.rw}🪙)`),...unl].join("<br>")||"";
-    $("btnInfinite").style.display=(win&&!this.infinite)?"block":"none";
+    ul.innerHTML=[
+      ...(chalDone?[`🎯 DESAFIO CONCLUÍDO: ${chalDone.nm} (+${chalDone.rw}🪙)`]:[]),
+      ...(newRecs.length?["🏅 NOVO RECORDE — "+newRecs.join(" • ")]:[]),
+      ...newAch.map(a=>`🏆 ${a.nm} (+${a.rw}🪙)`),...unl].join("<br>")||"";
+    $("btnInfinite").style.display=(win&&!this.infinite&&!this.challenge)?"block":"none";
     $("ovEnd").classList.add("on");
   },
 
@@ -2334,8 +2430,8 @@ const LevelUp={banishMode:false,
     const pool=[];
     for(const w of g.weapons)if(w.lvl<WMAX&&!g.banished.has("w:"+w.id))
       pool.push({kind:"wUp",id:w.id,wt:10});
-    if(g.weapons.length<MAXW)for(const id in WEAPONS)
-      if(!g.weapons.some(w=>w.id===id)&&!g.banished.has("w:"+id))
+    if(g.weapons.length<(g.maxWeapons||MAXW))for(const id in WEAPONS)
+      if(!WEAPONS[id].union&&!g.weapons.some(w=>w.id===id)&&!g.banished.has("w:"+id))
         pool.push({kind:"wNew",id,wt:5});
     for(const ps of g.passives)if(ps.lvl<PMAX&&!g.banished.has("p:"+ps.id))
       pool.push({kind:"pUp",id:ps.id,wt:9});
@@ -2343,7 +2439,7 @@ const LevelUp={banishMode:false,
       if(!g.passives.some(ps=>ps.id===id)&&!g.banished.has("p:"+id))
         pool.push({kind:"pNew",id,wt:5});
     // prioriza evoluções pendentes: passiva que falta p/ arma nv alto
-    for(const w of g.weapons){const req=WEAPONS[w.id].evo.req;
+    for(const w of g.weapons){const ev=WEAPONS[w.id].evo;if(!ev)continue;const req=ev.req;
       if(w.lvl>=6&&!w.evolved&&!g.passives.some(ps=>ps.id===req)){
         const c=pool.find(o=>o.kind==="pNew"&&o.id===req);if(c)c.wt+=12}}
     if(g.p.hp<g.p.maxhp*.7)pool.push({kind:"heal",wt:4});
@@ -2411,7 +2507,19 @@ const UI={
   menu(){Game.state="menu";if(Aud.ctx)Aud.startMusic("menu");this.show("scrMenu");
     $("menuCoins").textContent="🪙 "+meta.coins;
     const s=meta.stats;
-    $("menuStats").innerHTML=s.games?`Partidas: ${s.games} • Abates totais: ${s.kills} • Melhor tempo: ${fmtT(s.bestTime)} • Melhor nível: ${s.bestLevel}`:"";},
+    const r=meta.records||{};
+    $("menuStats").innerHTML=s.games?`Partidas: ${s.games} • Abates totais: ${s.kills} • Melhor tempo: ${fmtT(s.bestTime)} • Melhor nível: ${s.bestLevel}`
+      +(r.combo?`<br>🏅 Recordes — ⏱ ${fmtT(r.time||0)} • 💀 ${r.kills||0} • ⬆ Nv ${r.level||0} • ✦ ${r.combo} de sequência`:""):"";},
+  play(){Game.challenge=null;this.charSelect()},   // partida normal
+  challenges(){Game.state="menu";this.show("scrChal");
+    const g=$("chalGrid");g.innerHTML="";
+    for(const ch of CHALLENGES){const done=meta.chal[ch.id],d=document.createElement("div");
+      d.className="cardSel"+(done?" sel":"");
+      d.innerHTML=`<div class="ic">${ch.ic}</div><div class="nm">${ch.nm}</div>
+        <div class="ds">${ch.ds}</div>
+        <div class="lk" style="color:${done?"var(--incomum)":"var(--gold)"}">${done?"✔ Concluído":"Recompensa: +"+ch.rw+" 🪙"}</div>`;
+      d.onclick=()=>{Game.challenge=ch.id;this.charSelect()};
+      g.appendChild(d)}},
   charSelect(){Game.state="menu";this.show("scrChar");
     const g=$("charGrid");g.innerHTML="";
     for(const[id,c]of Object.entries(CHARS)){
@@ -2432,7 +2540,14 @@ const UI={
         <div class="ds">${has?m.ds:"Bloqueado"}</div>${!has?`<div class="lk">🔒 ${m.lkTxt}</div>`:""}`;
       if(has)d.onclick=()=>{Game.selMap=id;this.mapSelect()};
       g.appendChild(d)}
-    const mg=$("modGrid");mg.innerHTML="";
+    const mg=$("modGrid"),ch=Game.challenge&&CHALLENGES.find(c=>c.id===Game.challenge);
+    // num desafio, os modificadores ficam ocultos (a regra do desafio manda)
+    for(const el of document.querySelectorAll("#scrMap h2"))
+      if(el.textContent.startsWith("Modificadores"))el.style.display=ch?"none":"";
+    mg.style.display=ch?"none":"flex";
+    if(ch){$("modMult").innerHTML=`🎯 Desafio: <b style="color:var(--gold)">${ch.nm}</b> — ${ch.ds}`;
+      mg.innerHTML="";Game.selMods=[];return}
+    mg.innerHTML="";
     for(const m of MODS){const d=document.createElement("div");
       d.className="modItem"+(Game.selMods.includes(m.id)?" sel":"");
       d.innerHTML=`<div class="nm">${m.nm}</div><div>${m.ds}</div><div class="rw">+${Math.round(m.mult*100)}% moedas</div>`;
@@ -2463,10 +2578,14 @@ const UI={
       list.appendChild(d)}},
   collection(){this.show("scrCol");
     const b=$("colBody");
-    let wHtml="",eHtml="",enHtml="",bHtml="",cHtml="",mHtml="";
+    let wHtml="",eHtml="",uHtml="",enHtml="",bHtml="",cHtml="",mHtml="";
     for(const[id,w]of Object.entries(WEAPONS)){
+      if(w.union)continue;
       wHtml+=`<span>${meta.disc.w[id]?w.ic+" "+w.nm:"❔ ???"}</span>`;
       eHtml+=`<span>${meta.disc.e[id]?w.evo.ic+" "+w.evo.nm:"❔ ???"}</span>`}
+    const discU=meta.disc.u||{};
+    for(const u of UNIONS)
+      uHtml+=`<span>${discU[u.id]?u.ic+" "+u.nm:"❔ ???"}</span>`;
     for(const[id,e]of Object.entries(ETYPES))
       enHtml+=`<span>${meta.disc.en[id]?"👹 "+e.nm:"❔ ???"}</span>`;
     for(const[id,bs]of Object.entries(BOSSES))
@@ -2478,6 +2597,7 @@ const UI={
     const s=meta.stats;
     b.innerHTML=`<h2 style="font-size:17px">Armas descobertas</h2><div class="colGrid">${wHtml}</div>
       <h2 style="font-size:17px;margin-top:10px">Evoluções descobertas</h2><div class="colGrid">${eHtml}</div>
+      <h2 style="font-size:17px;margin-top:10px">Uniões lendárias</h2><div class="colGrid">${uHtml}</div>
       <h2 style="font-size:17px;margin-top:10px">Bestiário</h2><div class="colGrid">${enHtml}</div>
       <h2 style="font-size:17px;margin-top:10px">Bosses enfrentados</h2><div class="colGrid">${bHtml}</div>
       <h2 style="font-size:17px;margin-top:10px">Sobreviventes</h2><div class="colGrid">${cHtml}</div>

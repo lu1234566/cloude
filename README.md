@@ -24,7 +24,9 @@ Sobreviva por **30 minutos** coletando cristais de XP, montando builds com até 
 
 - **5 personagens** (2 desbloqueáveis), cada um com arma inicial e passiva única
 - **10 armas**, todas com **evolução** própria (nível 8 + passiva específica + baú)
-- **18 passivas** com sinergias (queimadura, lentidão, invocações, knockback…)
+- **3 uniões lendárias**: duas armas evoluídas se fundem numa terceira (Lâmina do Eclipse,
+  Cosmos Ardente, Juízo do Inverno), liberando um slot
+- **18 passivas** + **Reação Elemental**: alvos com 2+ status (fogo/gelo/sangramento) sofrem +35% de dano
 - **9 tipos de inimigos** + elites com 7 modificadores + **5 bosses** com padrões próprios
   (Guardião da Cripta, Bruxa do Eclipse, Colosso das Cinzas, Arauto do Vazio, Devorador de Estrelas)
 - **6 mapas** desbloqueáveis, cada um com evento próprio (raízes vivas, mãos do chão,
@@ -35,6 +37,8 @@ Sobreviva por **30 minutos** coletando cristais de XP, montando builds com até 
 - Baús comum/raro/lendário/**amaldiçoado**, bomba, imã, relógio congelante
 - **Loja permanente** com 13 melhorias, **18 conquistas**, **coleção com bestiário**,
 - **9 modificadores de partida** (Turbo, Caos, Bosses em dobro…) que multiplicam as moedas
+- **6 desafios** com regras especiais e recompensa única (Voto de Pobreza, Coração de Vidro,
+  Marcha dos Titãs…) e **ranking local** de recordes pessoais (tempo, abates, nível, sequência)
 - **Trilha sonora orquestral** (5 faixas: menu, exploração, sombria, boss e vitória)
   com crossfade entre cenas; música procedural por WebAudio como fallback; efeitos
   sintetizados, números de dano coloridos por tipo, glow aditivo, salvamento automático
